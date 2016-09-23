@@ -1,0 +1,17 @@
+﻿using System.ComponentModel;
+
+namespace InvertedTomato.Net.Feather {
+    public enum DisconnectionType : byte {
+        [Description("The connection was unexpectedly interrupted.")]
+        ConnectionInterupted,
+
+        [Description("The local side closed the connection.")]
+        LocalDisconnection,
+
+        [Description("The remote side closed the connection.")]
+        RemoteDisconnection,
+
+        [Description("The message was too long to fit into receive buffer.")]
+        ReceiveBufferFull
+    }
+}
