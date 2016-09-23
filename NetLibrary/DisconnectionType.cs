@@ -9,9 +9,6 @@ namespace InvertedTomato.Net.Feather {
         LocalDisconnection,
 
         [Description("The remote side closed the connection.")]
-        RemoteDisconnection,
-
-        [Description("The message was too long to fit into receive buffer.")]
-        ReceiveBufferFull
+        RemoteDisconnection
     }
 }

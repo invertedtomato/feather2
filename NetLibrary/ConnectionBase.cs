@@ -11,7 +11,10 @@ using System.Threading;
 using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.Net.Feather {
-    public abstract class ConnectionBase<TEncoder, TDecoder> where TDecoder : IDecoder, new() where TEncoder : IEncoder, new() {
+    public abstract class ConnectionBase<TEncoder, TDecoder> 
+        where TDecoder : IDecoder, new() 
+        where TEncoder : IEncoder, new() {
+
         /// <summary>
         /// The remote endpoint.
         /// </summary>

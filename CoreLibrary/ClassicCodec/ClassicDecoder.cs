@@ -8,6 +8,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
 
         private readonly Buffer<byte> Symbols;
 
+        // TODO: Unit tests!!
+
+
+
         public byte ReadUInt8() {
             return Symbols.Dequeue();
         }

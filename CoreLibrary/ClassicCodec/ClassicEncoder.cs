@@ -6,6 +6,9 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
     public class ClassicEncoder : IEncoder {
         private Buffer<byte> Symbols = new Buffer<byte>(8);
 
+
+        // TODO: Unit tests!
+
         public ClassicEncoder WriteUInt8(byte value) {
             return Write(BitConverter.GetBytes(value));
         }
