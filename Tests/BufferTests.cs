@@ -89,9 +89,17 @@ namespace InvertedTomato.Tests {
         public void Enqueue_Buffer() {
             var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 10);
 
-            buffer.Enqueue(buffer);
+            buffer.EnqueueBuffer(buffer);
             Assert.AreEqual(4, buffer.Used);
 
+        }
+
+        [TestMethod]
+        public void Enqueue_Array() {
+            var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 10);
+
+            buffer.EnqueueArray(new byte[] { 1, 2 });
+            Assert.AreEqual(4, buffer.Used);
         }
 
         [TestMethod]
@@ -108,6 +116,21 @@ namespace InvertedTomato.Tests {
             var buffer = new Buffer<byte>(new byte[] { 1, 2 });
 
             Assert.AreEqual(1, buffer.Dequeue());
+            Assert.AreEqual(1, buffer.Start);
+            Assert.AreEqual(2, buffer.End);
+
+            Assert.AreEqual(2, buffer.Dequeue());
+            Assert.AreEqual(2, buffer.Start);
+            Assert.AreEqual(2, buffer.End);
+        }
+
+        [TestMethod]
+        public void DequeueBuffer() {
+            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+
+            var extracted = buffer.DequeueBuffer(1);
+            Assert.AreEqual(1, extracted.Used);
+            Assert.AreEqual(1, extracted.Dequeue());
             Assert.AreEqual(1, buffer.Start);
             Assert.AreEqual(2, buffer.End);
 

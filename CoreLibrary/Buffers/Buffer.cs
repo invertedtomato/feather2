@@ -53,7 +53,7 @@ namespace InvertedTomato.Buffers {
         /// Append a new buffer to this buffer and increment End.
         /// </summary>
         /// <param name="buffer"></param>
-        public void Enqueue(ReadOnlyBuffer<T> buffer) {
+        public void EnqueueBuffer(ReadOnlyBuffer<T> buffer) {
 #if DEBUG
             if (null == buffer) {
                 throw new ArgumentNullException("buffer");
@@ -68,6 +68,24 @@ namespace InvertedTomato.Buffers {
         }
 
         /// <summary>
+        /// Append an array of values.
+        /// </summary>
+        /// <param name="values"></param>
+        public void EnqueueArray(T[] values) {
+#if DEBUG
+            if (null == values) {
+                throw new ArgumentNullException("buffer");
+            }
+            if (values.Length > Available) {
+                throw new BufferOverflowException("Insufficient space in buffer. " + Available + " available, but " + values.Length + " needed.");
+            }
+#endif
+
+            Array.Copy(values, 0, Underlying, End - 1, values.Length);
+            End += values.Length;
+        }
+
+        /// <summary>
         /// Return the next value from the buffer and increment Start.
         /// </summary>
         /// <returns></returns>
@@ -79,6 +97,27 @@ namespace InvertedTomato.Buffers {
 #endif
 
             return Underlying[Start++];
+        }
+
+        /// <summary>
+        /// Dequeue a number of values as a buffer.
+        /// </summary>
+        /// <param name="count"></param>
+        /// <returns></returns>
+        public Buffer<T> DequeueBuffer(int count) {
+#if DEBUG
+            if (count < 0) {
+                throw new ArgumentOutOfRangeException("Must be at least 0.");
+            }
+            if (Used < count) {
+                throw new BufferOverflowException("Buffer does not contain requested number of values (" + count + ").");
+            }
+#endif
+
+            var ret = new Buffer<T>(Underlying, Start, count);
+            Start += count;
+
+            return ret;
         }
 
         /// <summary>

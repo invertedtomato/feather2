@@ -6,48 +6,206 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
     public class ClassicDecoder : IDecoder {
         public int MaxHeaderLength { get { return 2; } }
 
-        public byte ReadUInt8() { throw new NotImplementedException(); }
-        public byte? ReadNullableUInt8() { throw new NotImplementedException(); }
+        private readonly Buffer<byte> Symbols;
 
-        public sbyte ReadSInt8() { throw new NotImplementedException(); }
-        public sbyte? ReadNullableSInt8() { throw new NotImplementedException(); }
+        public byte ReadUInt8() {
+            return Symbols.Dequeue();
+        }
+        public byte? ReadNullableUInt8() {
+            if (ReadBoolean()) {
+                return ReadUInt8();
+            } else {
+                return null;
+            }
+        }
 
-        public ushort ReadUInt16() { throw new NotImplementedException(); }
-        public ushort? ReadNullableUInt16() { throw new NotImplementedException(); }
+        public sbyte ReadSInt8() {
+            return (sbyte)Symbols.Dequeue();
+        }
+        public sbyte? ReadNullableSInt8() {
+            if (ReadBoolean()) {
+                return ReadSInt8();
+            } else {
+                return null;
+            }
+        }
 
-        public short ReadSInt16() { throw new NotImplementedException(); }
-        public short? ReadNullableSInt16() { throw new NotImplementedException(); }
+        public ushort ReadUInt16() {
+            var ret = Symbols.DequeueBuffer(2);
+            return BitConverter.ToUInt16(ret.GetUnderlying(), ret.Start);
+        }
+        public ushort? ReadNullableUInt16() {
+            if (ReadBoolean()) {
+                return ReadUInt16();
+            } else {
+                return null;
+            }
+        }
 
-        public uint ReadUInt32() { throw new NotImplementedException(); }
-        public uint? ReadNullableUInt32() { throw new NotImplementedException(); }
+        public short ReadSInt16() {
+            var ret = Symbols.DequeueBuffer(2);
+            return BitConverter.ToInt16(ret.GetUnderlying(), ret.Start);
+        }
+        public short? ReadNullableSInt16() {
+            if (ReadBoolean()) {
+                return ReadSInt16();
+            } else {
+                return null;
+            }
+        }
 
-        public int ReadSInt32() { throw new NotImplementedException(); }
-        public int? ReadNullableSInt32() { throw new NotImplementedException(); }
+        public uint ReadUInt32() {
+            var ret = Symbols.DequeueBuffer(4);
+            return BitConverter.ToUInt32(ret.GetUnderlying(), ret.Start);
+        }
+        public uint? ReadNullableUInt32() {
+            if (ReadBoolean()) {
+                return ReadUInt32();
+            } else {
+                return null;
+            }
+        }
 
-        public ulong ReadUInt64() { throw new NotImplementedException(); }
-        public ulong? ReadNullableUInt64() { throw new NotImplementedException(); }
+        public int ReadSInt32() {
+            var ret = Symbols.DequeueBuffer(4);
+            return BitConverter.ToInt32(ret.GetUnderlying(), ret.Start);
+        }
+        public int? ReadNullableSInt32() {
+            if (ReadBoolean()) {
+                return ReadSInt32();
+            } else {
+                return null;
+            }
+        }
 
-        public long ReadSInt64() { throw new NotImplementedException(); }
-        public long? ReadNullableSInt64() { throw new NotImplementedException(); }
+        public ulong ReadUInt64() {
+            var ret = Symbols.DequeueBuffer(8);
+            return BitConverter.ToUInt64(ret.GetUnderlying(), ret.Start);
+        }
+        public ulong? ReadNullableUInt64() {
+            if (ReadBoolean()) {
+                return ReadUInt64();
+            } else {
+                return null;
+            }
+        }
 
-        public float ReadFloat() { throw new NotImplementedException(); }
-        public float? ReadNullableFloat() { throw new NotImplementedException(); }
+        public long ReadSInt64() {
+            var ret = Symbols.DequeueBuffer(8);
+            return BitConverter.ToInt64(ret.GetUnderlying(), ret.Start);
+        }
+        public long? ReadNullableSInt64() {
+            if (ReadBoolean()) {
+                return ReadSInt64();
+            } else {
+                return null;
+            }
+        }
 
-        public double ReadDouble() { throw new NotImplementedException(); }
-        public double? ReadNullableDouble() { throw new NotImplementedException(); }
+        public float ReadFloat() {
+            var ret = Symbols.DequeueBuffer(4);
+            return BitConverter.ToSingle(ret.GetUnderlying(), ret.Start);
+        }
+        public float? ReadNullableFloat() {
+            if (ReadBoolean()) {
+                return ReadFloat();
+            } else {
+                return null;
+            }
+        }
 
-        public bool ReadBoolean() { throw new NotImplementedException(); }
-        public bool? ReadNullableBoolean() { throw new NotImplementedException(); }
+        public double ReadDouble() {
+            var ret = Symbols.DequeueBuffer(8);
+            return BitConverter.ToDouble(ret.GetUnderlying(), ret.Start);
+        }
+        public double? ReadNullableDouble() {
+            if (ReadBoolean()) {
+                return ReadDouble();
+            } else {
+                return null;
+            }
+        }
 
-        public Guid ReadGuid() { throw new NotImplementedException(); }
-        public Guid? ReadNullableGuid() { throw new NotImplementedException(); }
+        public bool ReadBoolean() {
+            var check = ReadUInt8();
+            if (check == 0) {
+                return false;
+            } else if (check == 1) {
+                return true;
+            } else {
+                throw new MalformedPayloadException("Unexpected value received (" + check + ").");
+            }
+        }
+        public bool? ReadNullableBoolean() {
+            var check = ReadUInt8();
+            if (check == 0) {
+                return false;
+            } else if (check == 1) {
+                return true;
+            } else if (check == 2) {
+                return null;
+            } else {
+                throw new MalformedPayloadException("Unexpected value received (" + check + ").");
+            }
+        }
 
-        public TimeSpan ReadTime() { throw new NotImplementedException(); }
-        public TimeSpan? ReadNullableTime() { throw new NotImplementedException(); }
+        public Guid ReadGuid() {
+            var ret = Symbols.DequeueBuffer(16);
+            return new Guid(ret.DequeueBuffer(16).ToArray());
+        }
+        public Guid? ReadNullableGuid() {
+            if (ReadBoolean()) {
+                return ReadGuid();
+            } else {
+                return null;
+            }
+        }
 
-        public DateTime ReadDateTime() { throw new NotImplementedException(); }
-        public DateTime? ReadNullableDateTime() { throw new NotImplementedException(); }
-        
+        public TimeSpan ReadTime() {
+            return new TimeSpan(ReadSInt64());
+        }
+        public TimeSpan? ReadNullableTime() {
+            if (ReadBoolean()) {
+                return ReadTime();
+            } else {
+                return null;
+            }
+        }
+
+        public TimeSpan ReadTimeAsSeconds() {
+            return new TimeSpan(ReadSInt64()*TimeSpan.TicksPerSecond);
+        }
+        public TimeSpan? ReadNullableTimeAsSeconds() {
+            if (ReadBoolean()) {
+                return ReadTimeAsSeconds();
+            } else {
+                return null;
+            }
+        }
+
+        public DateTime ReadDateTime() {
+            return new DateTime(ReadSInt64());
+        }
+        public DateTime? ReadNullableDateTime() {
+            if (ReadBoolean()) {
+                return ReadDateTime();
+            } else {
+                return null;
+            }
+        }
+
+
+        public DateTime ReadDateTimeAsSeconds() {
+            return DateUtility.FromUnixTimestamp(ReadSInt64());
+        }
+        public DateTime? ReadNullableDateTimeAsSeconds() {
+            if (ReadBoolean()) {
+                return ReadDateTimeAsSeconds();
+            } else {
+                return null;
+            }
+        }
+
         public int GetPayloadLength(ReadOnlyBuffer<byte> buffer) {
             throw new NotImplementedException();
         }

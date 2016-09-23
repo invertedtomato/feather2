@@ -191,7 +191,7 @@ namespace InvertedTomato.Net.Feather {
             // Merge into master buffer
             var masterLength = buffers.Sum(a => a.Used);
             var masterBuffer = new Buffer<byte>(masterLength);
-            buffers.Each(a => masterBuffer.Enqueue(a));
+            buffers.Each(a => masterBuffer.EnqueueBuffer(a));
 
             // Send in one batch
             RawSend(masterBuffer, done);

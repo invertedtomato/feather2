@@ -15,7 +15,7 @@ namespace InvertedTomato.IO.Feather.CSVCodec {
             var isQuoted = false;
             var isEscaped = false;
             var symbol = new StringBuilder();
-            var symbols = new Buffer<string>(8); // TODO: Allow variation?
+            var symbols = new Buffer<string>(8);
 
             // Loop all bytes in buffer // TODO: Not UTF8 compliant??
             while (!buffer.IsEmpty) {
