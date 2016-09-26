@@ -1,5 +1,6 @@
 ﻿using InvertedTomato.Buffers;
 using System;
+using System.Net;
 using System.Text;
 using ThreePlay.IO.Feather;
 
@@ -195,6 +196,21 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             if (ReadBoolean()) {
                 return ReadDateTimeSimple();
             } else {
+                return null;
+            }
+        }
+
+        public IPAddress ReadIPAddress() {
+            var length = ReadUInt8();
+            var raw = Read(length);
+
+            return new IPAddress(raw);
+        }
+        public IPAddress ReadNullableIPAddress() {
+            if (SymbolBuffer.Peek() > 0) {
+                return ReadIPAddress();
+            } else {
+                SymbolBuffer.Dequeue();
                 return null;
             }
         }

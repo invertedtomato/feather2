@@ -1,5 +1,6 @@
 ﻿using InvertedTomato.Buffers;
 using System;
+using System.Net;
 using System.Text;
 using ThreePlay.IO.Feather;
 
@@ -222,6 +223,28 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             } else {
                 WriteUInt8(1);
                 WriteDateTimeSimple(value.Value);
+            }
+
+            return this;
+        }
+
+        public ClassicEncoder WriteIPAddress(IPAddress value) {
+            if (null == value) {
+                throw new ArgumentNullException("value");
+            }
+
+            var raw = value.GetAddressBytes();
+
+            WriteUInt8((byte)raw.Length);
+            Write(raw);
+
+            return this;
+        }
+        public ClassicEncoder WriteNullableIPAddress(IPAddress value) {
+            if (null == value) {
+                WriteUInt8(0);
+            } else {
+                WriteIPAddress(value);
             }
 
             return this;

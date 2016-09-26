@@ -289,6 +289,22 @@ namespace InvertedTomato.Feather.Tests {
         }
 
         [TestMethod]
+        public void ReadIPAddress_Test() {
+            var encoder = new ClassicDecoder(StringToBuffer("05-00-04-01-02-03-04"));
+            Assert.AreEqual("1.2.3.4", encoder.ReadIPAddress().ToString());
+        }
+        [TestMethod]
+        public void ReadNullableIPAddress_Test() {
+            var encoder = new ClassicDecoder(StringToBuffer("05-00-04-01-02-03-04"));
+            Assert.AreEqual("1.2.3.4", encoder.ReadNullableIPAddress().ToString());
+        }
+        [TestMethod]
+        public void ReadNullableIPAddress_Null() {
+            var encoder = new ClassicDecoder(StringToBuffer("01-00-00"));
+            Assert.AreEqual(null, encoder.ReadNullableIPAddress());
+        }
+
+        [TestMethod]
         public void ReadString_Test() {
             var encoder = new ClassicDecoder(StringToBuffer("06-00-04-00-74-65-73-74"));
            Assert.AreEqual("test", encoder.ReadString());

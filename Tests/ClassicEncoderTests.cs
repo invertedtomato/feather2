@@ -4,6 +4,7 @@ using InvertedTomato.IO.Feather.ClassicCodec;
 using System.Linq;
 using System.IO;
 using ThreePlay.IO.Feather;
+using System.Net;
 
 namespace InvertedTomato.Feather.Tests {
     [TestClass]
@@ -331,6 +332,25 @@ namespace InvertedTomato.Feather.Tests {
         public void WriteNullableDateTimeSimple_Nullable() {
             var encoder = new ClassicEncoder();
             encoder.WriteNullableDateTimeSimple(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteIPAddress_IPv4() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteIPAddress(IPAddress.Parse("1.2.3.4"));
+            Assert.AreEqual("05-00-04-01-02-03-04", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableIPAddress_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableIPAddress(IPAddress.Parse("1.2.3.4"));
+            Assert.AreEqual("05-00-04-01-02-03-04", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableIPAddress_IPv4() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableIPAddress(null);
             Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
         }
 
