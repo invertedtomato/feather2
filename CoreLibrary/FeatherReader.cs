@@ -87,9 +87,7 @@ namespace ThreePlay.IO.Feather {
                 }
 
                 // Load into payload
-                if (!payload.LoadBuffer(buffer)) {
-                    throw new MalformedPayloadException("Decoder rejected payload as invalid.");
-                }
+                payload.LoadBuffer(buffer);
 
                 return payload;
             } finally {

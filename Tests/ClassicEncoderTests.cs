@@ -2,6 +2,8 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using InvertedTomato.IO.Feather.ClassicCodec;
 using System.Linq;
+using System.IO;
+using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.Feather.Tests {
     [TestClass]
@@ -333,10 +335,65 @@ namespace InvertedTomato.Feather.Tests {
         }
 
         [TestMethod]
+        public void WriteString_Test() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteString("test");
+            Assert.AreEqual("06-00-04-00-74-65-73-74", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableString_Test() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableString("test");
+            Assert.AreEqual("07-00-01-04-00-74-65-73-74", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableString_Null() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableString(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
         public void Write_Raw() {
             var encoder = new ClassicEncoder();
             encoder.Write(new byte[] { 1, 2, 3 });
             Assert.AreEqual("03-00-01-02-03", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void EndToEnd() {
+            using (var stream = new MemoryStream()) {
+                using (var writer = new FeatherWriter(stream)) {
+                    var payload = new ClassicEncoder();
+                    payload.WriteUInt32(1);
+                    payload.WriteBoolean(true);
+                    payload.WriteString("test");
+                    writer.Write(payload);
+
+                    payload = new ClassicEncoder();
+                    payload.WriteUInt32(2);
+                    payload.WriteBoolean(false);
+                    payload.WriteNullableString(null);
+                    writer.Write(payload);
+                }
+
+                stream.Position = 0;
+
+                using (var reader = new FeatherReader(stream)) {
+                    var payload2 = reader.Read<ClassicDecoder>();
+                    Assert.AreEqual((uint)1, payload2.ReadUInt32());
+                    Assert.AreEqual(true, payload2.ReadBoolean());
+                    Assert.AreEqual("test", payload2.ReadString());
+
+                    payload2 = reader.Read<ClassicDecoder>();
+                    Assert.AreEqual((uint)2, payload2.ReadUInt32());
+                    Assert.AreEqual(false, payload2.ReadBoolean());
+                    Assert.AreEqual(null, payload2.ReadNullableString());
+
+                    Assert.AreEqual(null, reader.Read<ClassicDecoder>());
+                }
+            }
+
         }
     }
 }

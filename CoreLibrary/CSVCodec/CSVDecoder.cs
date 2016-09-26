@@ -144,13 +144,12 @@ namespace InvertedTomato.IO.Feather.CSVCodec {
             return Symbols.Dequeue();
         }
 
-        public bool LoadBuffer(Buffer<byte> buffer) {
+        public void LoadBuffer(Buffer<byte> buffer) {
             var symbols = Decode(buffer);
             if (null == symbols) {
-                return false;
+                throw new MalformedPayloadException();
             }
             Symbols = symbols;
-            return true;
         }
 
         public int GetPayloadLength(ReadOnlyBuffer<byte> buffer) {

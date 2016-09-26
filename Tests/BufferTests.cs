@@ -233,7 +233,7 @@ namespace InvertedTomato.Tests {
 
             Assert.AreEqual(false, buffer.TryPeek(out value));
         }
-
+        
         [TestMethod]
         public void Peek_Absolute() {
             var buffer = new Buffer<byte>(new byte[] { 1, 2 });
@@ -252,6 +252,22 @@ namespace InvertedTomato.Tests {
         public void Peek_Absolute_Overflow() {
             var buffer = new Buffer<byte>(new byte[] { 1, 2 });
             buffer.Peek(3);
+        }
+
+        [TestMethod]
+        public void PeekBuffer() {
+            var buffer = new Buffer<byte>(new byte[] { 1, 2, 3 }, 1, 2);
+            var peeked = buffer.PeekBuffer(2).ToArray();
+            Assert.AreEqual(2, peeked.Length);
+            Assert.AreEqual(2, peeked[0]);
+            Assert.AreEqual(3, peeked[1]);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(BufferOverflowException))]
+        public void PeekBuffer_Overflow() {
+            var buffer = new Buffer<byte>(new byte[] { 1, 2, 3 }, 1, 2);
+            buffer.PeekBuffer(3);
         }
 
         [TestMethod]

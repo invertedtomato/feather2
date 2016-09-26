@@ -1,11 +1,12 @@
 ﻿using InvertedTomato.Buffers;
 using System;
+using System.Text;
 using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.IO.Feather.ClassicCodec {
     public class ClassicEncoder : IEncoder {
         private Buffer<byte> SymbolBuffer = new Buffer<byte>(8);
-        
+
         public ClassicEncoder() {
             // Reserve space for length
             SymbolBuffer.Enqueue(0);
@@ -221,6 +222,33 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             } else {
                 WriteUInt8(1);
                 WriteDateTimeSimple(value.Value);
+            }
+
+            return this;
+        }
+
+        public ClassicEncoder WriteString(string value) {
+            if (null == value) {
+                throw new ArgumentNullException("value");
+            }
+
+            // Convert to byte array
+            var raw = Encoding.UTF8.GetBytes(value);
+
+            // Write length
+            WriteUInt16((ushort)raw.Length);
+
+            // Write raw array
+            Write(raw);
+
+            return this;
+        }
+        public ClassicEncoder WriteNullableString(string value) {
+            if (null == value) {
+                WriteUInt8(0);
+            } else {
+                WriteUInt8(1);
+                WriteString(value);
             }
 
             return this;

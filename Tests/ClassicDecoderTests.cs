@@ -289,6 +289,22 @@ namespace InvertedTomato.Feather.Tests {
         }
 
         [TestMethod]
+        public void ReadString_Test() {
+            var encoder = new ClassicDecoder(StringToBuffer("06-00-04-00-74-65-73-74"));
+           Assert.AreEqual("test", encoder.ReadString());
+        }
+        [TestMethod]
+        public void ReadNullableString_Test() {
+            var encoder = new ClassicDecoder(StringToBuffer("07-00-01-04-00-74-65-73-74"));
+            Assert.AreEqual("test", encoder.ReadNullableString());
+        }
+        [TestMethod]
+        public void ReadNullableString_Null() {
+            var encoder = new ClassicDecoder(StringToBuffer("01-00-00"));
+            Assert.AreEqual(null, encoder.ReadNullableString());
+        }
+
+        [TestMethod]
         public void Read_Raw() {
             var encoder = new ClassicDecoder(StringToBuffer("03-00-01-02-03"));
             Assert.AreEqual("01-02-03", BitConverter.ToString(encoder.Read(3)));

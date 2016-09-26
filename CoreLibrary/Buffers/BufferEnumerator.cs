@@ -17,7 +17,7 @@ namespace InvertedTomato.Buffers {
                     throw new InvalidOperationException("Moved beyond end of set.");
                 }
 #endif
-                return Buffer.Peek(Buffer.Start + Position);
+                return Buffer.Peek(Position);
             }
         }
 
@@ -31,7 +31,7 @@ namespace InvertedTomato.Buffers {
                     throw new InvalidOperationException("Moved beyond end of set.");
                 }
 #endif
-                return Buffer.Peek(Buffer.Start + Position);
+                return Buffer.Peek(Position);
             }
         }
         public bool IsDisposed { get; private set; }

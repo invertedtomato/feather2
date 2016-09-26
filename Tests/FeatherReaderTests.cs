@@ -114,7 +114,7 @@ namespace InvertedTomato.Feather.Tests {
             return -1;
         }
 
-        public bool LoadBuffer(Buffer<byte> buffer) {
+        public void LoadBuffer(Buffer<byte> buffer) {
             throw new NotImplementedException();
         }
     }

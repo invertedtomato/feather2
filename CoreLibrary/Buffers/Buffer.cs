@@ -125,7 +125,7 @@ namespace InvertedTomato.Buffers {
                 throw new ArgumentOutOfRangeException("Must be at least 0.");
             }
             if (Used < count) {
-                throw new BufferOverflowException("Buffer does not contain requested number of values (" + count + ").");
+                throw new BufferOverflowException("Buffer does not contain requested number of values (requested: " + count + ", used: " + Used + ").");
             }
 #endif
 

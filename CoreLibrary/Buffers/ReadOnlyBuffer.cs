@@ -106,6 +106,19 @@ namespace InvertedTomato.Buffers {
             return Underlying[Start];
         }
 
+        public ReadOnlyBuffer<T> PeekBuffer(int count) {
+#if DEBUG
+            if (count < 0) {
+                throw new ArgumentOutOfRangeException("Count must be at least 0.");
+            }
+            if (Start + count > End) {
+                throw new BufferOverflowException("Insufficient values in buffer.");
+            }
+#endif
+
+            return new ReadOnlyBuffer<T>(Underlying, Start, count);
+        }
+
         /// <summary>
         /// Get the next value from the buffer using try pattern, without moving Start.
         /// </summary>
@@ -120,20 +133,20 @@ namespace InvertedTomato.Buffers {
                 return true;
             }
         }
-
+        
         /// <summary>
         /// Return a specific value from the buffer without changing Start.
         /// </summary>
-        /// <param name="position"></param>
+        /// <param name="position">Offset from Start.</param>
         /// <returns></returns>
         public T Peek(int position) {
 #if DEBUG
-            if (position < Start || position >= End) {
+            if (position < 0 || position >= Used) {
                 throw new BufferOverflowException("No value in given position.");
             }
 #endif
 
-            return Underlying[position];
+            return Underlying[Start + position];
         }
 
         /// <summary>
