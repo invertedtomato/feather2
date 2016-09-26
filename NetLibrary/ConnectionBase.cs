@@ -11,9 +11,9 @@ using System.Threading;
 using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.Net.Feather {
-    public abstract class ConnectionBase<TEncoder, TDecoder> 
-        where TDecoder : IDecoder, new() 
-        where TEncoder : IEncoder, new() {
+    public abstract class ConnectionBase<TEncoder, TDecoder> : IDisposable
+        where TDecoder : IDecoder, new()
+        where TEncoder : IEncoder {
 
         /// <summary>
         /// The remote endpoint.
@@ -169,7 +169,7 @@ namespace InvertedTomato.Net.Feather {
                 throw new ArgumentNullException("payload");
             }
 #endif
-            
+
             Send(payloads, null);
         }
 
@@ -242,7 +242,7 @@ namespace InvertedTomato.Net.Feather {
         /// When a payload arrives.
         /// </summary>
         /// <param name="payload"></param>
-        protected abstract void OnDataArrived(Buffer<byte> payload);
+        protected abstract void OnDataArrived(TDecoder payload);
 
         /// <summary>
         /// Disconnect from the remote endpoint and dispose.

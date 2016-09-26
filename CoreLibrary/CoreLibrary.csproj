@@ -59,6 +59,8 @@
     <Compile Include="FeatherWriter.cs" />
     <Compile Include="FeatherReader.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="TrivialCodec\TrivialDecoder.cs" />
+    <Compile Include="TrivialCodec\TrivialEncoder.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -46,7 +46,7 @@ namespace InvertedTomato.Tests {
         }
 
         [TestMethod]
-        public void Enqueue_Single() {
+        public void Enqueue() {
             var buffer = new Buffer<byte>(2);
 
             // First enqueue
@@ -87,12 +87,30 @@ namespace InvertedTomato.Tests {
         }
 
         [TestMethod]
-        public void Enqueue_Buffer() {
+        public void EnqueueBuffer() {
             var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 10);
 
             buffer.EnqueueBuffer(buffer);
             Assert.AreEqual(4, buffer.Used);
+            var result = buffer.ToArray();
+            Assert.AreEqual(1, result[0]);
+            Assert.AreEqual(2, result[1]);
+            Assert.AreEqual(1, result[2]);
+            Assert.AreEqual(2, result[3]);
 
+        }
+
+        [TestMethod]
+        public void EnqueueBuffer_ExactSpace() {
+            var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 4);
+
+            buffer.EnqueueBuffer(buffer);
+            Assert.AreEqual(4, buffer.Used);
+            var result = buffer.ToArray();
+            Assert.AreEqual(1, result[0]);
+            Assert.AreEqual(2, result[1]);
+            Assert.AreEqual(1, result[2]);
+            Assert.AreEqual(2, result[3]);
         }
 
         [TestMethod]

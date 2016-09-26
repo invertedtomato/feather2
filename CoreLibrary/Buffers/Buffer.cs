@@ -63,7 +63,7 @@ namespace InvertedTomato.Buffers {
             }
 #endif
 
-            Array.Copy(buffer.GetUnderlying(), buffer.Start, Underlying, End - 1, buffer.Used);
+            Array.Copy(buffer.GetUnderlying(), buffer.Start, Underlying, End, buffer.Used);
             End += buffer.Used;
         }
 

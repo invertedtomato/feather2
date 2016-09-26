@@ -64,6 +64,8 @@
     <Compile Include="FeatherWriterTests.cs" />
     <Compile Include="ClassicEncoderTests.cs" />
     <Compile Include="ClassicDecoderTests.cs" />
+    <Compile Include="ConnectionBaseTests.cs" />
+    <Compile Include="FeatherTCPTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
@@ -72,6 +74,10 @@
     <ProjectReference Include="..\CoreLibrary\CoreLibrary.csproj">
       <Project>{b72c27be-ee48-4a21-9a02-7c0211b9cacc}</Project>
       <Name>CoreLibrary</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NetLibrary\NetLibrary.csproj">
+      <Project>{6CFA9D4B-2700-4166-9A7B-A06FB1C63321}</Project>
+      <Name>NetLibrary</Name>
     </ProjectReference>
   </ItemGroup>
   <Choose>

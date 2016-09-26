@@ -7,7 +7,7 @@ using ThreePlay.IO.Feather;
 namespace InvertedTomato.Net.Feather {
     public sealed class FeatherTCP<TConnection, TEncoder, TDecoder> : IDisposable 
         where TDecoder : IDecoder, new() 
-        where TEncoder : IEncoder, new() 
+        where TEncoder : IEncoder
         where TConnection : ConnectionBase<TEncoder, TDecoder>, new() {
 
         /// <summary>
