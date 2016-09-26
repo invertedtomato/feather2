@@ -1,5 +1,6 @@
 ﻿using InvertedTomato.Buffers;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Collections.Generic;
 
 namespace InvertedTomato.Tests {
@@ -99,7 +100,17 @@ namespace InvertedTomato.Tests {
             var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 10);
 
             buffer.EnqueueArray(new byte[] { 1, 2 });
+
+
             Assert.AreEqual(4, buffer.Used);
+
+            // Check underlying
+            var underlying = buffer.GetUnderlying();
+            Assert.AreEqual(10, underlying.Length);
+            Assert.AreEqual(1, underlying[0]);
+            Assert.AreEqual(2, underlying[1]);
+            Assert.AreEqual(1, underlying[2]);
+            Assert.AreEqual(2, underlying[3]);
         }
 
         [TestMethod]
@@ -321,6 +332,44 @@ namespace InvertedTomato.Tests {
 
             Assert.AreEqual(0, buffer.Start);
             Assert.AreEqual(0, buffer.End);
+        }
+
+        [TestMethod]
+        public void ToString_ByteArray() {
+            var buffer = new Buffer<byte>(new byte[] { 1, 2, 3 }, 1, 2);
+            Assert.AreEqual("02-03", buffer.ToString());
+        }
+
+
+        [TestMethod]
+        public void ToString_IntArray() {
+            var buffer = new Buffer<int>(new int[] { 1, 2, 3 }, 1, 2);
+            Assert.AreEqual("2-3", buffer.ToString());
+        }
+
+        [TestMethod]
+        public void Replace() {
+            var buffer = new Buffer<int>(new int[] { 1, 2, 3 }, 1, 2);
+            buffer.Replace(1, 5);
+
+            var result = buffer.ToArray();
+            Assert.AreEqual(2, result.Length);
+            Assert.AreEqual(5, result[0]);
+            Assert.AreEqual(3, result[1]);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IndexOutOfRangeException))]
+        public void Replace_IndexTooLow() {
+            var buffer = new Buffer<int>(new int[] { 1, 2, 3 }, 1, 2);
+            buffer.Replace(0, 5);
+        }
+
+        [TestMethod]
+        [ExpectedException(typeof(IndexOutOfRangeException))]
+        public void Replace_IndexTooHigh() {
+            var buffer = new Buffer<int>(new int[] { 1, 2, 3 }, 1, 2);
+            buffer.Replace(3, 5);
         }
     }
 }

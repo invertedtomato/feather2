@@ -84,7 +84,7 @@ Write(value.ToString()); }
             Symbols.Add(value);
         }
 
-        public ReadOnlyBuffer<byte> ToBuffer() {
+        public ReadOnlyBuffer<byte> GetBuffer() {
             return Encode(Symbols);
         }
     }

@@ -181,5 +181,22 @@ namespace InvertedTomato.Buffers {
         IEnumerator IEnumerable.GetEnumerator() {
             return new BufferEnumerator<T>(this);
         }
+
+        public override string ToString() {
+            var byteArray = Underlying as byte[];
+            if (null != byteArray) {
+                return BitConverter.ToString(byteArray, Start, Used);
+            }
+
+            var sb = new System.Text.StringBuilder();
+            for (var i = Start; i < End; i++) {
+                if (sb.Length > 0) {
+                    sb.Append("-");
+                }
+                sb.Append(Underlying[i]);
+            }
+
+            return sb.ToString();
+        }
     }
 }

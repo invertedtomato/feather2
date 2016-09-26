@@ -62,6 +62,7 @@
     <Compile Include="BufferTests.cs" />
     <Compile Include="FeatherReaderTests.cs" />
     <Compile Include="FeatherWriterTests.cs" />
+    <Compile Include="ClassicEncoderTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

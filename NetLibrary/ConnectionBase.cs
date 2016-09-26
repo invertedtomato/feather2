@@ -144,7 +144,7 @@ namespace InvertedTomato.Net.Feather {
             }
 #endif
 
-            RawSend(payload.ToBuffer(), null);
+            RawSend(payload.GetBuffer(), null);
         }
 
         /// <summary>
@@ -157,7 +157,7 @@ namespace InvertedTomato.Net.Feather {
             }
 #endif
 
-            RawSend(payload.ToBuffer(), done);
+            RawSend(payload.GetBuffer(), done);
         }
 
         /// <summary>
@@ -189,7 +189,7 @@ namespace InvertedTomato.Net.Feather {
 #endif
 
             // Get buffers
-            var buffers = payloads.Select(a => a.ToBuffer());
+            var buffers = payloads.Select(a => a.GetBuffer());
 
             // Merge into master buffer
             var masterLength = buffers.Sum(a => a.Used);

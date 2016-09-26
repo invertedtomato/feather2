@@ -4,13 +4,19 @@ using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.IO.Feather.ClassicCodec {
     public class ClassicEncoder : IEncoder {
-        private Buffer<byte> Symbols = new Buffer<byte>(8);
+        private Buffer<byte> SymbolBuffer = new Buffer<byte>(8);
 
+
+        public ClassicEncoder() {
+            // Reserve space for length
+            SymbolBuffer.Enqueue(0);
+            SymbolBuffer.Enqueue(0);
+        }
 
         // TODO: Unit tests!
 
         public ClassicEncoder WriteUInt8(byte value) {
-            return Write(BitConverter.GetBytes(value));
+            return Write(new byte[] { value });
         }
         public ClassicEncoder WriteNullableUInt8(byte? value) {
             if (null == value) {
@@ -24,7 +30,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public ClassicEncoder WriteSInt8(sbyte value) {
-            return Write(BitConverter.GetBytes(value));
+            return Write(new byte[] { (byte)value });
         }
         public ClassicEncoder WriteNullableSInt8(sbyte? value) {
             if (null == value) {
@@ -239,22 +245,28 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             }
 
             // If there isn't enough space...
-            if (Symbols.Available < value.Length) {
+            if (SymbolBuffer.Available < value.Length) {
                 // Calculate new size
-                var size = Math.Max(Symbols.MaxCapacity * 2, Symbols.Used + value.Length); // Either double the size, or make it big enough - whichever is greater
+                var size = Math.Max(SymbolBuffer.MaxCapacity * 2, SymbolBuffer.Used + value.Length); // Either double the size, or make it big enough - whichever is greater
 
                 // Resize
-                Symbols = Symbols.Resize(size);
+                SymbolBuffer = SymbolBuffer.Resize(size);
             }
 
             // Enqueue
-            Symbols.EnqueueArray(value);
+            SymbolBuffer.EnqueueArray(value);
 
             return this;
         }
 
-        public ReadOnlyBuffer<byte> ToBuffer() {
-            return Symbols;
+        public ReadOnlyBuffer<byte> GetBuffer() {
+            // Update length header
+            var lengthHeader = BitConverter.GetBytes((ushort)(SymbolBuffer.Used - 2));
+            SymbolBuffer.Replace(0, lengthHeader[0]);
+            SymbolBuffer.Replace(1, lengthHeader[1]);
+
+            // Return buffer
+            return SymbolBuffer;
         }
     }
 }

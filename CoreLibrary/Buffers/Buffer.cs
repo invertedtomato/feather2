@@ -81,8 +81,23 @@ namespace InvertedTomato.Buffers {
             }
 #endif
 
-            Array.Copy(values, 0, Underlying, End - 1, values.Length);
+            Array.Copy(values, 0, Underlying, End, values.Length);
             End += values.Length;
+        }
+
+        /// <summary>
+        /// Replace a value.
+        /// </summary>
+        /// <param name="index"></param>
+        /// <param name="value"></param>
+        public void Replace(int index, T value) {
+#if DEBUG
+            if (index < Start || index >= End) {
+                throw new IndexOutOfRangeException("Index outside of used range (" + Start + " to " + End + ").");
+            }
+#endif
+
+            Underlying[index] = value;
         }
 
         /// <summary>

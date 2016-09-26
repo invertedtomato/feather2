@@ -6,14 +6,14 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
     public class ClassicDecoder : IDecoder {
         public int MaxHeaderLength { get { return 2; } }
 
-        private readonly Buffer<byte> Symbols;
+        private readonly Buffer<byte> SymbolBuffer;
 
         // TODO: Unit tests!!
 
 
 
         public byte ReadUInt8() {
-            return Symbols.Dequeue();
+            return SymbolBuffer.Dequeue();
         }
         public byte? ReadNullableUInt8() {
             if (ReadBoolean()) {
@@ -24,7 +24,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public sbyte ReadSInt8() {
-            return (sbyte)Symbols.Dequeue();
+            return (sbyte)SymbolBuffer.Dequeue();
         }
         public sbyte? ReadNullableSInt8() {
             if (ReadBoolean()) {
@@ -35,7 +35,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public ushort ReadUInt16() {
-            var ret = Symbols.DequeueBuffer(2);
+            var ret = SymbolBuffer.DequeueBuffer(2);
             return BitConverter.ToUInt16(ret.GetUnderlying(), ret.Start);
         }
         public ushort? ReadNullableUInt16() {
@@ -47,7 +47,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public short ReadSInt16() {
-            var ret = Symbols.DequeueBuffer(2);
+            var ret = SymbolBuffer.DequeueBuffer(2);
             return BitConverter.ToInt16(ret.GetUnderlying(), ret.Start);
         }
         public short? ReadNullableSInt16() {
@@ -59,7 +59,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public uint ReadUInt32() {
-            var ret = Symbols.DequeueBuffer(4);
+            var ret = SymbolBuffer.DequeueBuffer(4);
             return BitConverter.ToUInt32(ret.GetUnderlying(), ret.Start);
         }
         public uint? ReadNullableUInt32() {
@@ -71,7 +71,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public int ReadSInt32() {
-            var ret = Symbols.DequeueBuffer(4);
+            var ret = SymbolBuffer.DequeueBuffer(4);
             return BitConverter.ToInt32(ret.GetUnderlying(), ret.Start);
         }
         public int? ReadNullableSInt32() {
@@ -83,7 +83,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public ulong ReadUInt64() {
-            var ret = Symbols.DequeueBuffer(8);
+            var ret = SymbolBuffer.DequeueBuffer(8);
             return BitConverter.ToUInt64(ret.GetUnderlying(), ret.Start);
         }
         public ulong? ReadNullableUInt64() {
@@ -95,7 +95,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public long ReadSInt64() {
-            var ret = Symbols.DequeueBuffer(8);
+            var ret = SymbolBuffer.DequeueBuffer(8);
             return BitConverter.ToInt64(ret.GetUnderlying(), ret.Start);
         }
         public long? ReadNullableSInt64() {
@@ -107,7 +107,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public float ReadFloat() {
-            var ret = Symbols.DequeueBuffer(4);
+            var ret = SymbolBuffer.DequeueBuffer(4);
             return BitConverter.ToSingle(ret.GetUnderlying(), ret.Start);
         }
         public float? ReadNullableFloat() {
@@ -119,7 +119,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public double ReadDouble() {
-            var ret = Symbols.DequeueBuffer(8);
+            var ret = SymbolBuffer.DequeueBuffer(8);
             return BitConverter.ToDouble(ret.GetUnderlying(), ret.Start);
         }
         public double? ReadNullableDouble() {
@@ -154,7 +154,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public Guid ReadGuid() {
-            var ret = Symbols.DequeueBuffer(16);
+            var ret = SymbolBuffer.DequeueBuffer(16);
             return new Guid(ret.DequeueBuffer(16).ToArray());
         }
         public Guid? ReadNullableGuid() {

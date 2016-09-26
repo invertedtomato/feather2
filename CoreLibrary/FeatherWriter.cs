@@ -62,7 +62,7 @@ namespace ThreePlay.IO.Feather {
 #endif
 
                 // Encode payload
-                var buffer = payload.ToBuffer();
+                var buffer = payload.GetBuffer();
 
                 // Write to output
                 Output.Write(buffer);
