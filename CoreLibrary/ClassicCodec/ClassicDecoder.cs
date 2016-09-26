@@ -6,6 +6,7 @@ using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.IO.Feather.ClassicCodec {
     public class ClassicDecoder : IDecoder {
+        public int MinHeaderLength { get { return 2; } }
         public int MaxHeaderLength { get { return 2; } }
 
         private Buffer<byte> SymbolBuffer;
@@ -242,7 +243,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
 
             // If header is missing, return INSUFFICENT
             if (buffer.Used < 2) {
-                return -1;
+                return 0;
             }
 
             // Read length header
@@ -261,6 +262,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
 
             // Burn length header
             SymbolBuffer.DequeueBuffer(2);
+        }
+
+        public ReadOnlyBuffer<byte> GetNullPayload() {
+            return new Buffer<byte>(new byte[] { 0, 0 });
         }
     }
 }

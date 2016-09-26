@@ -60,7 +60,7 @@ namespace InvertedTomato.IO.Feather.CSVCodec {
                     symbol.Append(c);
                 }
             }
-            
+
             return null;
         }
 
@@ -104,11 +104,12 @@ namespace InvertedTomato.IO.Feather.CSVCodec {
                 }
             }
 
-            return -1;
+            return 0;
         }
 
         private Buffer<string> Symbols;
 
+        public int MinHeaderLength { get { return 1; } }
         public int MaxHeaderLength { get { return 1 * 1024 * 1025; } }
 
         public CSVDecoder() { }
@@ -154,6 +155,10 @@ namespace InvertedTomato.IO.Feather.CSVCodec {
 
         public int GetPayloadLength(ReadOnlyBuffer<byte> buffer) {
             return DecodeLength(buffer);
+        }
+
+        public ReadOnlyBuffer<byte> GetNullPayload() {
+            return new Buffer<byte>(new byte[] { (byte)'\n' });
         }
     }
 }

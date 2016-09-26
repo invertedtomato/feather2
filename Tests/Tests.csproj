@@ -35,8 +35,8 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="InvertedTomato.Common, Version=1.0.6080.19086, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\InvertedTomato.Common.1.0.6080.19086\lib\net45\InvertedTomato.Common.dll</HintPath>
+    <Reference Include="InvertedTomato.Common, Version=1.0.6114.14471, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\InvertedTomato.Common.1.0.6114.14471\lib\net45\InvertedTomato.Common.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -68,9 +68,6 @@
     <Compile Include="FeatherTCPTests.cs" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\CoreLibrary\CoreLibrary.csproj">
       <Project>{b72c27be-ee48-4a21-9a02-7c0211b9cacc}</Project>
       <Name>CoreLibrary</Name>
@@ -79,6 +76,9 @@
       <Project>{6CFA9D4B-2700-4166-9A7B-A06FB1C63321}</Project>
       <Name>NetLibrary</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">

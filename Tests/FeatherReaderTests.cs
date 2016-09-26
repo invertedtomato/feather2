@@ -60,7 +60,7 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void Read_BufferGrowing() {
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("1,true,test\n"))) {
-                using (var reader = new FeatherReader(stream, new Options() { PayloadInitialBufferSize = 1 })) {
+                using (var reader = new FeatherReader(stream)) {
                     // First read
                     var payload = reader.Read<CSVDecoder>();
                     Assert.AreEqual(1, payload.ReadInteger());
@@ -99,7 +99,7 @@ namespace InvertedTomato.Feather.Tests {
         [ExpectedException(typeof(MalformedPayloadException))]
         public void Read_ExceedHeaderMaxLength() {
             using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("1,true,test\n"))) {
-                using (var reader = new FeatherReader(stream, new Options() { PayloadInitialBufferSize = 1 })) {
+                using (var reader = new FeatherReader(stream)) {
                     reader.Read<FakeDecoder>();
                 }
             }
@@ -108,14 +108,13 @@ namespace InvertedTomato.Feather.Tests {
 
 
     public class FakeDecoder : IDecoder {
+        public int MinHeaderLength { get { return 1; } }
         public int MaxHeaderLength { get { return 1; } }
 
-        public int GetPayloadLength(ReadOnlyBuffer<byte> buffer) {
-            return -1;
-        }
+        public int GetPayloadLength(ReadOnlyBuffer<byte> buffer) { return 0; }
 
-        public void LoadBuffer(Buffer<byte> buffer) {
-            throw new NotImplementedException();
-        }
+        public void LoadBuffer(Buffer<byte> buffer) { throw new NotImplementedException(); }
+
+        public ReadOnlyBuffer<byte> GetNullPayload() { throw new NotImplementedException(); }
     }
 }

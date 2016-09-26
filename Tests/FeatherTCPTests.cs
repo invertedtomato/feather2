@@ -69,7 +69,7 @@ namespace InvertedTomato.Feather.Tests {
                 Send(new TrivialEncoder(new byte[] { 0x01 }));
             }
 
-            protected override void OnDataArrived(TrivialDecoder payload) {
+            protected override void OnMessageReceived(TrivialDecoder payload) {
                 if (payload.SymbolBuffer.Used != 2) {
                     throw new ProtocolViolationException("Unexpected length");
                 }

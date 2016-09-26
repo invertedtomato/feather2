@@ -28,10 +28,10 @@ namespace InvertedTomato.Feather.Tests {
         public void SendMany() {
             using (var connection = new FakeConnection()) {
                 var payloads = new List<TrivialEncoder>();
-                payloads.Add(new TrivialEncoder( new byte[] { 1 }));
-                payloads.Add(new TrivialEncoder( new byte[] { 2 }));
-                payloads.Add(new TrivialEncoder( new byte[] { 3 }));
-                
+                payloads.Add(new TrivialEncoder(new byte[] { 1 }));
+                payloads.Add(new TrivialEncoder(new byte[] { 2 }));
+                payloads.Add(new TrivialEncoder(new byte[] { 3 }));
+
                 Assert.AreEqual("01-01-01-02-01-03", BitConverter.ToString(connection.TestSendMany(payloads.ToArray())));
             }
         }
@@ -75,7 +75,7 @@ namespace InvertedTomato.Feather.Tests {
                 return LastPayload;
             }
 
-            protected override void OnDataArrived(TrivialDecoder payload) {
+            protected override void OnMessageReceived(TrivialDecoder payload) {
                 LastPayload = payload.SymbolBuffer.ToArray();
             }
         }

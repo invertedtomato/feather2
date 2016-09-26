@@ -60,5 +60,18 @@ namespace InvertedTomato.Buffers {
 
             return target.BeginRead(buffer.GetUnderlying(), buffer.End, buffer.Available, callback, state);
         }
+
+        public static IAsyncResult BeginRead(this IStream target, Buffer<byte> buffer, int maxCount, AsyncCallback callback, object state) {
+#if DEBUG
+            if (null == target) {
+                throw new ArgumentNullException("target");
+            }
+            if (null == buffer) {
+                throw new ArgumentNullException("buffer");
+            }
+#endif
+
+            return target.BeginRead(buffer.GetUnderlying(), buffer.End, Math.Min(buffer.Available, maxCount), callback, state);
+        }
     }
 }

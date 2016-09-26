@@ -10,13 +10,32 @@ namespace ThreePlay.IO.Feather {
         /// </summary>
         public bool IsDisposed { get; private set; }
 
+        /// <summary>
+        /// Decoding options.
+        /// </summary>
         private readonly Options Options;
+
+        /// <summary>
+        /// Underlying input stream
+        /// </summary>
         private readonly Stream Input;
 
-        private Buffer<byte> LengthBuffer = new Buffer<byte>(0);
+        /// <summary>
+        /// Buffer for partially read headers.
+        /// </summary>
+        private Buffer<byte> HeaderBuffer = new Buffer<byte>(0);
 
+        /// <summary>
+        /// Simple instantiation.
+        /// </summary>
+        /// <param name="input"></param>
         public FeatherReader(Stream input) : this(input, new Options()) { }
 
+        /// <summary>
+        /// Instantiate with options.
+        /// </summary>
+        /// <param name="input"></param>
+        /// <param name="options"></param>
         public FeatherReader(Stream input, Options options) {
 #if DEBUG
             if (null == input) {
@@ -32,34 +51,39 @@ namespace ThreePlay.IO.Feather {
             Options = options;
         }
 
+        /// <summary>
+        /// Read next message using the given decoder.
+        /// </summary>
+        /// <typeparam name="TDecoder"></typeparam>
+        /// <returns></returns>
         public TDecoder Read<TDecoder>() where TDecoder : IDecoder, new() {
             try {
                 // Instantiate payload for reading
                 var payload = new TDecoder();
 
                 // Prepare the buffer
-                if (LengthBuffer.MaxCapacity != payload.MaxHeaderLength) {
-                    LengthBuffer = new Buffer<byte>(payload.MaxHeaderLength);
+                if (HeaderBuffer.MaxCapacity != payload.MaxHeaderLength) {
+                    HeaderBuffer = new Buffer<byte>(payload.MaxHeaderLength);
                 }
 
                 // Read first byte
-                if (Input.Read(LengthBuffer, 1) != 1) {
+                if (Input.Read(HeaderBuffer, 1) != 1) {
                     return default(TDecoder); // End of file
                 }
-                var length = payload.GetPayloadLength(LengthBuffer);
+                var length = payload.GetPayloadLength(HeaderBuffer);
 
                 // Keep reading bytes until header if found
                 var headerLength = 1;
-                while (length == -1) {
-                    if (LengthBuffer.IsFull) {
+                while (length == 0) {
+                    if (HeaderBuffer.IsFull) {
                         throw new MalformedPayloadException("Length not found in the first MaxHeaderLength (" + payload.MaxHeaderLength + ") bytes.");
                     }
-                    if (Input.Read(LengthBuffer, 1) != 1) {
+                    if (Input.Read(HeaderBuffer, 1) != 1) {
                         throw new MalformedPayloadException("End of file reached before header was completed.");
                     }
 
                     // Attempt to get length
-                    length = payload.GetPayloadLength(LengthBuffer);
+                    length = payload.GetPayloadLength(HeaderBuffer);
                     headerLength++;
                 };
 
@@ -74,12 +98,12 @@ namespace ThreePlay.IO.Feather {
                 }
 
                 // Add header to buffer
-                var buffer = LengthBuffer.Resize(length);
+                var payloadBuffer = HeaderBuffer.Resize(length);
 
                 // Read remaining payload bytes
                 var remaining = length - headerLength;
                 var read = 0;
-                while ((read = Input.Read(buffer, remaining)) > 0) {
+                while ((read = Input.Read(payloadBuffer, remaining)) > 0) {
                     remaining -= read;
                 }
                 if (remaining > 0) {
@@ -87,15 +111,19 @@ namespace ThreePlay.IO.Feather {
                 }
 
                 // Load into payload
-                payload.LoadBuffer(buffer);
+                payload.LoadBuffer(payloadBuffer);
 
                 return payload;
             } finally {
                 // Reset for next read
-                LengthBuffer.Reset();
+                HeaderBuffer.Reset();
             }
         }
 
+        /// <summary>
+        /// Dispose.
+        /// </summary>
+        /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing) {
             if (IsDisposed) {
                 return;
@@ -108,6 +136,10 @@ namespace ThreePlay.IO.Feather {
 
             // Set large fields to null
         }
+
+        /// <summary>
+        /// Dispose.
+        /// </summary>
         public void Dispose() {
             Dispose(true);
         }

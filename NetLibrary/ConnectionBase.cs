@@ -76,9 +76,11 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Receive buffers.
         /// </summary>
-        private Buffer<byte> ReceiveBuffer;
+        private Buffer<byte> HeaderBuffer;
 
-        private TDecoder NextPayload;
+        private Buffer<byte> PayloadBuffer = null;
+
+        private TDecoder NextMessage;
 
         /// <summary>
         /// Start the connection. Can only be called once.
@@ -127,74 +129,74 @@ namespace InvertedTomato.Net.Feather {
             }
 
             // Setup receive
-            ReceiveBuffer = new Buffer<byte>(1);
-            NextPayload = new TDecoder();
+            NextMessage = new TDecoder();
+            HeaderBuffer = new Buffer<byte>(NextMessage.MaxHeaderLength);
 
             // Seed receiving
-            ReceiveBegin();
+            ReceiveHeaderChunk();
         }
 
         /// <summary>
         /// Send single payload to remote endpoint.
         /// </summary>    
-        protected void Send(TEncoder payload) {
+        protected void Send(TEncoder message) {
 #if DEBUG
-            if (null == payload) {
+            if (null == message) {
                 throw new ArgumentNullException("payload");
             }
 #endif
 
-            RawSend(payload.GetBuffer(), null);
+            RawSend(message.GetBuffer(), null);
         }
 
         /// <summary>
         /// Send single payload to remote endpoint and execute a callback when done.
         /// </summary>
-        protected void Send(TEncoder payload, Action done) {
+        protected void Send(TEncoder message, Action done) {
 #if DEBUG
-            if (null == payload) {
+            if (null == message) {
                 throw new ArgumentNullException("payload");
             }
 #endif
 
-            RawSend(payload.GetBuffer(), done);
+            RawSend(message.GetBuffer(), done);
         }
 
         /// <summary>
         /// Send multiple payloads to remote endpoint.
         /// </summary>    
-        protected void Send(TEncoder[] payloads) {
+        protected void Send(TEncoder[] messages) {
 #if DEBUG
-            if (null == payloads) {
+            if (null == messages) {
                 throw new ArgumentNullException("payload");
             }
 #endif
 
-            Send(payloads, null);
+            Send(messages, null);
         }
 
         /// <summary>
         /// Send multiple payloads to remote endpoint and execute a callback when done.
         /// </summary>
-        protected void Send(TEncoder[] payloads, Action done) {
+        protected void Send(TEncoder[] messages, Action done) {
 #if DEBUG
-            if (null == payloads) {
-                throw new ArgumentNullException("payloads");
+            if (null == messages) {
+                throw new ArgumentNullException("messages");
             }
-            foreach (var payload in payloads) {
-                if (null == payload) {
-                    throw new ArgumentNullException("payloads", "Element in array.");
+            foreach (var message in messages) {
+                if (null == message) {
+                    throw new ArgumentNullException("messages", "Element in array.");
                 }
             }
 #endif
 
             // Get buffers
-            var buffers = payloads.Select(a => a.GetBuffer());
+            var payloadBuffers = messages.Select(a => a.GetBuffer());
 
             // Merge into master buffer
-            var masterLength = buffers.Sum(a => a.Used);
+            var masterLength = payloadBuffers.Sum(a => a.Used);
             var masterBuffer = new Buffer<byte>(masterLength);
-            buffers.Each(a => masterBuffer.EnqueueBuffer(a));
+            payloadBuffers.Each(a => masterBuffer.EnqueueBuffer(a));
 
             // Send in one batch
             RawSend(masterBuffer, done);
@@ -241,8 +243,8 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// When a payload arrives.
         /// </summary>
-        /// <param name="payload"></param>
-        protected abstract void OnDataArrived(TDecoder payload);
+        /// <param name="message"></param>
+        protected abstract void OnMessageReceived(TDecoder message);
 
         /// <summary>
         /// Disconnect from the remote endpoint and dispose.
@@ -251,12 +253,13 @@ namespace InvertedTomato.Net.Feather {
             DisconnectInner(DisconnectionType.LocalDisconnection);
         }
 
+        private void ReceiveHeaderChunk() {
+            // Calculate size of next chunk to receive
+            var chunkSize = HeaderBuffer.IsEmpty ? NextMessage.MinHeaderLength : 1;
 
-
-        private void ReceiveBegin() {
             try {
                 // Request next chunk
-                ClientStream.BeginRead(ReceiveBuffer, ReceiveCallback, null);
+                ClientStream.BeginRead(HeaderBuffer, chunkSize, OnHeaderChunkReceived, null);
             } catch (ObjectDisposedException) {
             } catch (IOException) {
                 // Report connection failure
@@ -264,7 +267,7 @@ namespace InvertedTomato.Net.Feather {
             }
         }
 
-        private void ReceiveCallback(IAsyncResult ar) {
+        private void OnHeaderChunkReceived(IAsyncResult ar) {
             // Complete receive and get read length
             int rxBytes = 0;
             try {
@@ -282,39 +285,94 @@ namespace InvertedTomato.Net.Feather {
                 return;
             }
 
-            // Update buffer count
-            ReceiveBuffer.IncrementEnd(rxBytes);
+            // Update buffer end
+            HeaderBuffer.IncrementEnd(rxBytes);
 
             // Increment received bytes
             TotalRxBytes = unchecked(TotalRxBytes + rxBytes);
 
-            // TODO: Handle keep-alive 0 bytes !!!!!!!!!!!!!!!!!!!!!!!!!!!
-
             // Attempt to get length
-            var length = NextPayload.GetPayloadLength(ReceiveBuffer);
+            var length = NextMessage.GetPayloadLength(HeaderBuffer);
 
-            throw new NotImplementedException();
-
-            /*
-            // Alert new bytes available
-            OnDataArrived(ReceiveBuffer);
-
-            // If data has been consumed, reset buffer size
-            if (ReceiveBuffer.Start > 0) {
-                ReceiveBuffer = ReceiveBuffer.Resize(Options.DecodingBufferInitialSize); ///////////////
-            } else if (ReceiveBuffer.Available == 0) { // If buffer is full
-                // Check if max size has been reached
-                if (ReceiveBuffer.Count >= Options.PayloadMaxSize) {
-                    DisconnectInner(DisconnectionType.ReceiveBufferFull);
+            // If length is unknown...
+            if (length == 0) {
+                // Check if the header is too long
+                if (HeaderBuffer.IsFull) {
+                    DisconnectInner(DisconnectionType.MalformedPayload);
                     return;
                 }
 
-                // Grow buffer
-                ReceiveBuffer = ReceiveBuffer.Resize((int)(ReceiveBuffer.Count * Options.DecodingBufferGrowthRate));
+                // Get another byte
+                ReceiveHeaderChunk();
+                return;
             }
-            */
-            // Get next chunk
-            ReceiveBegin();
+
+            // Allocate payload buffer
+            PayloadBuffer = HeaderBuffer.Resize(length);
+
+            // Clear header buffer
+            HeaderBuffer.Reset();
+
+            // Receive payload
+            ReceivePayload();
+        }
+
+        private void ReceivePayload() {
+            // If not all payload has arrived...
+            if (!PayloadBuffer.IsFull) {
+                // Fetch another chunk
+                ReceivePayloadChunk();
+
+                return;
+            }
+
+            // Prepare message
+            NextMessage.LoadBuffer(PayloadBuffer);
+
+            // Return message
+            OnMessageReceived(NextMessage);
+
+            // Reset for next message
+            NextMessage = new TDecoder();
+
+            // Receive next header
+            ReceiveHeaderChunk();
+        }
+
+        private void ReceivePayloadChunk() {
+            try {
+                // Request next chunk
+                ClientStream.BeginRead(PayloadBuffer, OnPayloadChunkReceived, null);
+            } catch (ObjectDisposedException) {
+            } catch (IOException) {
+                // Report connection failure
+                DisconnectInner(DisconnectionType.ConnectionInterupted);
+            }
+        }
+
+        private void OnPayloadChunkReceived(IAsyncResult ar) {
+            // Complete receive and get read length
+            int rxBytes = 0;
+            try {
+                rxBytes = ClientStream.EndRead(ar);
+            } catch (ObjectDisposedException) {
+                return;
+            } catch (IOException) {
+                DisconnectInner(DisconnectionType.ConnectionInterupted);
+                return;
+            }
+
+            // Handle connection reset
+            if (rxBytes == 0) {
+                DisconnectInner(DisconnectionType.RemoteDisconnection);
+                return;
+            }
+
+            // Update buffer end
+            PayloadBuffer.IncrementEnd(rxBytes);
+
+            // Receive payload
+            ReceivePayload();
         }
 
         /// <summary>
@@ -322,7 +380,7 @@ namespace InvertedTomato.Net.Feather {
         /// </summary>
         private void KeepAliveTimer_OnElapsed(object sender, System.Timers.ElapsedEventArgs e) {
             // Send blank payload - it will reset the timeout on the remote end, however not be delivered as an actual payload
-            RawSend(new Buffer<byte>(new byte[] { 0 }), null);
+            RawSend(NextMessage.GetNullPayload(), null);
         }
 
         /// <summary>
