@@ -6,10 +6,21 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
     public class ClassicDecoder : IDecoder {
         public int MaxHeaderLength { get { return 2; } }
 
-        private readonly Buffer<byte> SymbolBuffer;
+        private Buffer<byte> SymbolBuffer;
 
         // TODO: Unit tests!!
 
+        public ClassicDecoder() { }
+        public ClassicDecoder(Buffer<byte> symbolBuffer) {
+            if (null == symbolBuffer) {
+                throw new ArgumentNullException("symbolBuffer");
+            }
+
+            // Load buffer
+            if (!LoadBuffer(symbolBuffer)) {
+                throw new ArgumentException("Buffer doesn't contain complete message.", "symbolBuffer");
+            }
+        }
 
 
         public byte ReadUInt8() {
@@ -132,25 +143,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
 
         public bool ReadBoolean() {
             var check = ReadUInt8();
-            if (check == 0) {
-                return false;
-            } else if (check == 1) {
-                return true;
-            } else {
-                throw new MalformedPayloadException("Unexpected value received (" + check + ").");
-            }
-        }
-        public bool? ReadNullableBoolean() {
-            var check = ReadUInt8();
-            if (check == 0) {
-                return false;
-            } else if (check == 1) {
-                return true;
-            } else if (check == 2) {
-                return null;
-            } else {
-                throw new MalformedPayloadException("Unexpected value received (" + check + ").");
-            }
+            return check > 0;
         }
 
         public Guid ReadGuid() {
@@ -176,12 +169,12 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             }
         }
 
-        public TimeSpan ReadTimeAsSeconds() {
-            return new TimeSpan(ReadSInt64()*TimeSpan.TicksPerSecond);
+        public TimeSpan ReadTimeSimple() {
+            return new TimeSpan(ReadSInt64() * TimeSpan.TicksPerSecond);
         }
-        public TimeSpan? ReadNullableTimeAsSeconds() {
+        public TimeSpan? ReadNullableTimeSimple() {
             if (ReadBoolean()) {
-                return ReadTimeAsSeconds();
+                return ReadTimeSimple();
             } else {
                 return null;
             }
@@ -198,24 +191,48 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             }
         }
 
-
-        public DateTime ReadDateTimeAsSeconds() {
+        public DateTime ReadDateTimeSimple() {
             return DateUtility.FromUnixTimestamp(ReadSInt64());
         }
-        public DateTime? ReadNullableDateTimeAsSeconds() {
+        public DateTime? ReadNullableDateTimeSimple() {
             if (ReadBoolean()) {
-                return ReadDateTimeAsSeconds();
+                return ReadDateTimeSimple();
             } else {
                 return null;
             }
         }
 
+        public byte[] Read(int length) {
+            if (length < 0) {
+                throw new ArgumentOutOfRangeException("Must be at least 0.");
+            }
+
+            return SymbolBuffer.DequeueBuffer(length).ToArray();
+        }
         public int GetPayloadLength(ReadOnlyBuffer<byte> buffer) {
             throw new NotImplementedException();
         }
 
         public bool LoadBuffer(Buffer<byte> buffer) {
-            throw new NotImplementedException();
+            if (null == buffer) {
+                throw new ArgumentNullException("buffer");
+            }
+
+            // Read length header
+            var lengthHeader = buffer.DequeueBuffer(2);
+            var length = BitConverter.ToUInt16(lengthHeader.GetUnderlying(), lengthHeader.Start);
+
+            // If entire payload is in buffer
+            if (buffer.Used >= length) {
+                // Store
+                SymbolBuffer = buffer;
+
+                // Return success
+                return true;
+            } else {
+                // Return failure
+                return false;
+            }
         }
     }
 }
