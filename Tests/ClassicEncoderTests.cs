@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using InvertedTomato.IO.Feather.ClassicCodec;
+using System.Linq;
 
 namespace InvertedTomato.Feather.Tests {
     [TestClass]
@@ -135,6 +136,207 @@ namespace InvertedTomato.Feather.Tests {
             var encoder = new ClassicEncoder();
             encoder.WriteNullableSInt32(null);
             Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteUInt64_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteUInt64(1);
+            Assert.AreEqual("08-00-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableUInt64_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableUInt64(1);
+            Assert.AreEqual("09-00-01-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableUInt64_Null() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableUInt64(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteSInt64_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteSInt64(1);
+            Assert.AreEqual("08-00-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteSInt64_Minus1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteSInt64(-1);
+            Assert.AreEqual("08-00-FF-FF-FF-FF-FF-FF-FF-FF", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableSInt64_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableSInt64(1);
+            Assert.AreEqual("09-00-01-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableSInt64_Null() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableSInt64(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteFloat_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteFloat(1);
+            Assert.AreEqual("04-00-00-00-80-3F", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableFloat_Null() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableFloat(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableFloat_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableFloat(1);
+            Assert.AreEqual("05-00-01-00-00-80-3F", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteDouble_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteDouble(1);
+            Assert.AreEqual("08-00-00-00-00-00-00-00-F0-3F", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableDouble_Null() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableDouble(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableDouble_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableDouble(1);
+            Assert.AreEqual("09-00-01-00-00-00-00-00-00-F0-3F", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteBoolean_True() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteBoolean(true);
+            Assert.AreEqual("01-00-FF", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteBoolean_False() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteBoolean(false);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteGuid_Random() {
+            var value = Guid.NewGuid();
+
+            var encoder = new ClassicEncoder();
+            encoder.WriteGuid(value);
+            Assert.AreEqual(BitConverter.ToString(new byte[] { 16, 0 }.Concat(value.ToByteArray()).ToArray()), encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableGuid_Random() {
+            var value = Guid.NewGuid();
+
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableGuid(value);
+            Assert.AreEqual(BitConverter.ToString(new byte[] { 17, 0, 1 }.Concat(value.ToByteArray()).ToArray()), encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableGuid_Null() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableGuid(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteTime_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteTime(new TimeSpan(1));
+            Assert.AreEqual("08-00-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableTime_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableTime(new TimeSpan(1));
+            Assert.AreEqual("09-00-01-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableTime_Nullable() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableTime(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteTimeSimple_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteTimeSimple(new TimeSpan(0, 0, 1));
+            Assert.AreEqual("08-00-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableTimeSimple_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableTimeSimple(new TimeSpan(0, 0, 1));
+            Assert.AreEqual("09-00-01-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableTimeSimple_Nullable() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableTimeSimple(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteDateTime_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteDateTime(new DateTime(1));
+            Assert.AreEqual("08-00-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableDateTime_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableDateTime(new DateTime(1));
+            Assert.AreEqual("09-00-01-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableDateTime_Nullable() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableDateTime(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void WriteDateTimeSimple_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteDateTimeSimple(DateUtility.Epoch.AddSeconds(1));
+            Assert.AreEqual("08-00-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableDateTimeSimple_1() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableDateTimeSimple(DateUtility.Epoch.AddSeconds(1));
+            Assert.AreEqual("09-00-01-01-00-00-00-00-00-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableDateTimeSimple_Nullable() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableDateTimeSimple(null);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+
+        [TestMethod]
+        public void Write_Raw() {
+            var encoder = new ClassicEncoder();
+            encoder.Write(new byte[] { 1, 2, 3 });
+            Assert.AreEqual("03-00-01-02-03", encoder.GetBuffer().ToString());
         }
     }
 }

@@ -5,15 +5,12 @@ using ThreePlay.IO.Feather;
 namespace InvertedTomato.IO.Feather.ClassicCodec {
     public class ClassicEncoder : IEncoder {
         private Buffer<byte> SymbolBuffer = new Buffer<byte>(8);
-
-
+        
         public ClassicEncoder() {
             // Reserve space for length
             SymbolBuffer.Enqueue(0);
             SymbolBuffer.Enqueue(0);
         }
-
-        // TODO: Unit tests!
 
         public ClassicEncoder WriteUInt8(byte value) {
             return Write(new byte[] { value });
@@ -156,17 +153,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public ClassicEncoder WriteBoolean(bool value) {
-            return Write(BitConverter.GetBytes(value));
-        }
-        public ClassicEncoder WriteNullableBoolean(bool? value) {
-            if (null == value) {
-                WriteUInt8(0);
-            } else {
-                WriteUInt8(1);
-                WriteBoolean(value.Value);
-            }
-
-            return this;
+            return Write(new byte[] { value ? byte.MaxValue : byte.MinValue });
         }
 
         public ClassicEncoder WriteGuid(Guid value) {
@@ -177,7 +164,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
                 WriteUInt8(0);
             } else {
                 WriteUInt8(1);
-                WriteNullableGuid(value.Value);
+                WriteGuid(value.Value);
             }
 
             return this;
@@ -197,15 +184,15 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteTimeInSeconds(TimeSpan value) {
-            return WriteDouble(value.TotalSeconds);
+        public ClassicEncoder WriteTimeSimple(TimeSpan value) {
+            return WriteSInt64((long)value.TotalSeconds);
         }
-        public ClassicEncoder WriteNullableTimeInSeconds(TimeSpan? value) {
+        public ClassicEncoder WriteNullableTimeSimple(TimeSpan? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
                 WriteUInt8(1);
-                WriteTimeInSeconds(value.Value);
+                WriteTimeSimple(value.Value);
             }
 
             return this;
@@ -225,15 +212,15 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteDateTimeInSeconds(DateTime value) {
+        public ClassicEncoder WriteDateTimeSimple(DateTime value) {
             return WriteUInt64(value.ToUnixTimeAsUInt64());
         }
-        public ClassicEncoder WriteNullableDateTimeInSeconds(DateTime? value) {
+        public ClassicEncoder WriteNullableDateTimeSimple(DateTime? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
                 WriteUInt8(1);
-                WriteDateTimeInSeconds(value.Value);
+                WriteDateTimeSimple(value.Value);
             }
 
             return this;
