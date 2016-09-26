@@ -53,6 +53,8 @@ namespace InvertedTomato.Feather.Tests {
                 // Dispose and check
                 server.Dispose();
                 Assert.IsTrue(server.IsDisposed);
+
+                Thread.Sleep(50);
             }
 
             // Check all worked
@@ -70,11 +72,8 @@ namespace InvertedTomato.Feather.Tests {
             }
 
             protected override void OnMessageReceived(TrivialDecoder payload) {
-                if (payload.SymbolBuffer.Used != 2) {
+                if (payload.SymbolBuffer.Used != 1) {
                     throw new ProtocolViolationException("Unexpected length");
-                }
-                if (payload.SymbolBuffer.Dequeue() != 0x01) {
-                    throw new ProtocolViolationException("Unexpected opcode.");
                 }
                 if (payload.SymbolBuffer.Dequeue() != 0x01) {
                     throw new ProtocolViolationException("Unexpected opcode.");
