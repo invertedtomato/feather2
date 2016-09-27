@@ -11,9 +11,9 @@ using System.Threading;
 using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.Net.Feather {
-    public abstract class ConnectionBase<TEncoder, TDecoder> : IDisposable
-        where TDecoder : IDecoder, new()
-        where TEncoder : IEncoder {
+    public sealed class Remote<TEncoder, TDecoder> : IDisposable
+        where TEncoder : IEncoder
+        where TDecoder : IDecoder, new() {
 
         /// <summary>
         /// The remote endpoint.
@@ -44,48 +44,50 @@ namespace InvertedTomato.Net.Feather {
         public bool IsDisposed { get; private set; }
 
         /// <summary>
-        /// Callback for when disconnection takes place.
+        /// When the remote disconnects.
         /// </summary>
-        public Action<DisconnectionType> OnDisconnected; // TODO: consider using an abstract method instead
+        public Action<DisconnectionType> OnDisconnection;
+
+        /// <summary>
+        /// When a message arrives from this remote.
+        /// </summary>
+        public Action<TDecoder> OnMessage;
+
+        /// <summary>
+        /// Configuration options
+        /// </summary>
+        private  ConnectionOptions Options;
+
+        /// <summary>
+        /// Timer to send keep-alive payloads to prevent disconnection.
+        /// </summary>
+        private  System.Timers.Timer KeepAliveTimer;
+
+        /// <summary>
+        /// Client socket.
+        /// </summary>
+        private  ISocket ClientSocket;
+
+        /// <summary>
+        /// Client stream.
+        /// </summary>
+        private  IStream ClientStream;
+
+        /// <summary>
+        /// Receive buffers.
+        /// </summary>
+        private  Buffer<byte> HeaderBuffer;
 
         /// <summary>
         /// Number of payloads that haven't made it to the TCP buffer yet. Will be used for back-pressure indication.
         /// </summary>
         private int OutstandingSends = 0;
 
-        /// <summary>
-        /// Configuration options
-        /// </summary>
-        private ConnectionOptions Options;
-
-        /// <summary>
-        /// Timer to send keep-alive payloads to prevent disconnection.
-        /// </summary>
-        private System.Timers.Timer KeepAliveTimer;
-
-        /// <summary>
-        /// Client socket.
-        /// </summary>
-        private ISocket ClientSocket;
-
-        /// <summary>
-        /// Client stream.
-        /// </summary>
-        private IStream ClientStream;
-
-        /// <summary>
-        /// Receive buffers.
-        /// </summary>
-        private Buffer<byte> HeaderBuffer;
-
         private Buffer<byte> PayloadBuffer = null;
 
         private TDecoder NextMessage;
 
-        /// <summary>
-        /// Start the connection. Can only be called once.
-        /// </summary>
-        public void Start(bool isServerConnection, ISocket clientSocket, ConnectionOptions options) {
+        public void Start(bool isServerConnection, ISocket clientSocket, ConnectionOptions options, Action<DisconnectionType> onDisconnection, Action<TDecoder> onMessage) {
 #if DEBUG
             if (null == options) {
                 throw new ArgumentNullException("options");
@@ -98,8 +100,10 @@ namespace InvertedTomato.Net.Feather {
             }
 #endif
 
-            // Store options
+            // Store
             Options = options;
+            OnDisconnection = onDisconnection;
+            OnMessage = onMessage;
 
             // Store and setup socket
             ClientSocket = clientSocket;
@@ -118,7 +122,7 @@ namespace InvertedTomato.Net.Feather {
             }
 
             // Setup keep alive
-            if (options.ApplicationLayerKeepAlive) {
+            if (options.UseApplicationLayerKeepAlive) {
                 // Start keep-alive timer (must be before receive start)
                 KeepAliveTimer = new System.Timers.Timer(options.KeepAliveInterval.TotalMilliseconds);
                 KeepAliveTimer.Elapsed += KeepAliveTimer_OnElapsed;
@@ -139,7 +143,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Send single payload to remote endpoint.
         /// </summary>    
-        protected void Send(TEncoder message) {
+        public void Send(TEncoder message) {
 #if DEBUG
             if (null == message) {
                 throw new ArgumentNullException("payload");
@@ -152,7 +156,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Send single payload to remote endpoint and execute a callback when done.
         /// </summary>
-        protected void Send(TEncoder message, Action done) {
+        public void Send(TEncoder message, Action done) {
 #if DEBUG
             if (null == message) {
                 throw new ArgumentNullException("payload");
@@ -165,7 +169,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Send multiple payloads to remote endpoint.
         /// </summary>    
-        protected void Send(TEncoder[] messages) {
+        public void Send(TEncoder[] messages) {
 #if DEBUG
             if (null == messages) {
                 throw new ArgumentNullException("payload");
@@ -178,7 +182,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Send multiple payloads to remote endpoint and execute a callback when done.
         /// </summary>
-        protected void Send(TEncoder[] messages, Action done) {
+        public void Send(TEncoder[] messages, Action done) {
 #if DEBUG
             if (null == messages) {
                 throw new ArgumentNullException("messages");
@@ -235,16 +239,10 @@ namespace InvertedTomato.Net.Feather {
             }
 
             // Restart keep-alive timer
-            if (Options.ApplicationLayerKeepAlive) {
+            if (Options.UseApplicationLayerKeepAlive) {
                 KeepAliveTimer.Restart();
             }
         }
-
-        /// <summary>
-        /// When a payload arrives.
-        /// </summary>
-        /// <param name="message"></param>
-        protected abstract void OnMessageReceived(TDecoder message);
 
         /// <summary>
         /// Disconnect from the remote endpoint and dispose.
@@ -330,7 +328,7 @@ namespace InvertedTomato.Net.Feather {
             NextMessage.LoadBuffer(PayloadBuffer);
 
             // Return message
-            OnMessageReceived(NextMessage);
+            OnMessage.TryInvoke(NextMessage);
 
             // Reset for next message
             NextMessage = new TDecoder();
@@ -393,14 +391,14 @@ namespace InvertedTomato.Net.Feather {
             }
             Dispose();
 
-            OnDisconnected.TryInvoke(reason);
+            OnDisconnection.TryInvoke(reason);
         }
 
         /// <summary>
         /// Dispose.
         /// </summary>
         /// <param name="disposing"></param>
-        protected virtual void Dispose(bool disposing) {
+        private void Dispose(bool disposing) {
             if (IsDisposed) {
                 return;
             }
@@ -438,7 +436,6 @@ namespace InvertedTomato.Net.Feather {
         public void Dispose() {
             Dispose(true);
         }
-
 
         /// <summary>
         /// Validate certificates given by servers, on the client end.

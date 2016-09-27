@@ -1,19 +1,29 @@
 ﻿using InvertedTomato.Testable.Sockets;
 using System;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.Net.Feather {
-    public sealed class FeatherTCP<TConnection, TEncoder, TDecoder> : IDisposable 
-        where TDecoder : IDecoder, new() 
+    public sealed class FeatherTCP<TEncoder, TDecoder> : IDisposable
         where TEncoder : IEncoder
-        where TConnection : ConnectionBase<TEncoder, TDecoder>, new() {
+        where TDecoder : IDecoder, new() {
 
         /// <summary>
         /// When a client connects.
         /// </summary>
-        public Action<TConnection> OnClientConnected;
+        public Action<Remote<TEncoder, TDecoder>> OnConnection;
+
+        /// <summary>
+        /// When a client disconnects.
+        /// </summary>
+        public Action<Remote<TEncoder, TDecoder>, DisconnectionType> OnDisconnection;
+
+        /// <summary>
+        /// When a inbound message arrives
+        /// </summary>
+        public Action<Remote<TEncoder, TDecoder>, TDecoder> OnMessage;
 
         /// <summary>
         /// Has the server been disposed.
@@ -28,11 +38,49 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Socket the server is listening on.
         /// </summary>
-        private readonly Socket ListenerSocket;
+        private Socket ListenerSocket = null;
 
-        internal FeatherTCP(EndPoint endPoint, ConnectionOptions options) {
-            // Store configuration
+        /// <summary>
+        /// All active remotes (may contain some very recently disconnected.)
+        /// </summary>
+        private ConcurrentDictionary<EndPoint, Remote<TEncoder, TDecoder>> Remotes = new ConcurrentDictionary<EndPoint, Remote<TEncoder, TDecoder>>();
+
+
+        /// <summary>
+        /// Simple instantiation.
+        /// </summary>
+        public FeatherTCP() : this(new ConnectionOptions()) { }
+
+        /// <summary>
+        /// Instantiate with options
+        /// </summary>
+        /// <param name="options"></param>
+        public FeatherTCP(ConnectionOptions options) {
+            if (null == options) {
+                throw new ArgumentNullException("options");
+            }
+
+            // Store options
             Options = options;
+        }
+
+
+        /// <summary>
+        /// Start a Feather server by listening for connections.
+        /// </summary>
+        /// <returns>Feather instance</returns>
+        public void Listen(int port) {
+            Listen(new IPEndPoint(IPAddress.Any, port));
+        }
+
+        /// <summary>
+        /// Start a Feather server by listening for connections.
+        /// </summary>
+        /// <returns>Feather instance</returns>
+        public void Listen(EndPoint endPoint) {
+            if (null == endPoint) {
+                throw new ArgumentNullException("endpoint");
+            }
 
             try {
                 // Open socket
@@ -45,6 +93,70 @@ namespace InvertedTomato.Net.Feather {
             } catch (ObjectDisposedException) { } // This occurs if the server is disposed during instantiation
         }
 
+
+        /// <summary>
+        /// Connect to a Feather server.
+        /// </summary>
+        /// <returns>Server connection</returns>
+        public Remote<TEncoder, TDecoder> Connect(IPAddress serverAddress, int port) { return Connect(new IPEndPoint(serverAddress, port)); }
+
+        /// <summary>
+        /// Connect to a Feather server.
+        /// </summary>
+        /// <returns>Server connection</returns>
+        public Remote<TEncoder, TDecoder> Connect(string serverName, int port) { return Connect(new DnsEndPoint(serverName, port)); }
+
+        /// <summary>
+        /// Connect to a Feather server.
+        /// </summary>
+        /// <returns>Server connection</returns>
+        public Remote<TEncoder, TDecoder> Connect(EndPoint endPoint) {
+#if DEBUG
+            if (null == endPoint) {
+                throw new ArgumentNullException("endPoint");
+            }
+#endif
+
+            // Open socket
+            var clientSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            clientSocket.Connect(endPoint);
+
+            // Create remote
+            var remote = Remotes[endPoint] = new Remote<TEncoder, TDecoder>();
+            remote.Start(false, new SocketReal(clientSocket), Options,
+                (reason) => {
+                    OnDisconnection(remote, reason);
+                    Remotes.TryRemove(endPoint);
+                },
+                (message) => { OnMessage(remote, message); }
+            );
+
+            return remote;
+        }
+
+
+        public void Broadcast(TEncoder message) {
+#if DEBUG
+            if (null == message) {
+                throw new ArgumentNullException("payload");
+            }
+#endif
+
+            Broadcast(new TEncoder[] { message });
+        }
+
+        public void Broadcast(TEncoder[] messages) {
+#if DEBUG
+            if (null == messages) {
+                throw new ArgumentNullException("payload");
+            }
+#endif
+
+            // Send to all remotes
+            Remotes.Each(a => a.Value.Send(messages));
+        }
+
+
         private void AcceptBegin() {
             // Wait for, and accept next connection
             ListenerSocket.BeginAccept(new AsyncCallback(AcceptCallback), null);
@@ -54,22 +166,25 @@ namespace InvertedTomato.Net.Feather {
             try {
                 // Get client socket
                 var clientSocket = ListenerSocket.EndAccept(ar);
+                var endPoint = clientSocket.RemoteEndPoint;
 
-                // Create connection
-                var connection = new TConnection();
-                connection.Start(true, new SocketReal(clientSocket), Options);
+                // Create remote
+                var remote = Remotes[endPoint] = new Remote<TEncoder, TDecoder>();
+                remote.Start(true, new SocketReal(clientSocket), Options,
+                    (reason) => {
+                        OnDisconnection(remote, reason);
+                        Remotes.TryRemove(endPoint);
+                    },
+                    (message) => { OnMessage(remote, message); }
+                );
 
                 // Raise event
-                OnClientConnected.TryInvoke(connection);
+                OnConnection.TryInvoke(remote);
 
                 // Resume accepting sockets
                 AcceptBegin();
             } catch (ObjectDisposedException) { } // This occurs naturally during dispose
         }
-
-        /*
-         public void Broadcast(object topic, Message message) {}
-         */
 
         public void Dispose() { Dispose(true); }
         void Dispose(bool disposing) {
@@ -85,94 +200,7 @@ namespace InvertedTomato.Net.Feather {
         }
 
 
-        /// <summary>
-        /// Start a Feather server by listening for connections.
-        /// </summary>
-        /// <returns>Feather instance</returns>
-        public static FeatherTCP<TConnection, TEncoder, TDecoder> Listen(int port) { return Listen(new IPEndPoint(IPAddress.Any, port)); }
 
-        /// <summary>
-        /// Start a Feather server by listening for connections.
-        /// </summary>
-        /// <returns>Feather instance</returns>
-        public static FeatherTCP<TConnection, TEncoder, TDecoder> Listen(int port, ConnectionOptions options) { return Listen(new IPEndPoint(IPAddress.Any, port), options); }
 
-        /// <summary>
-        /// Start a Feather server by listening for connections.
-        /// </summary>
-        /// <returns>Feather instance</returns>
-        public static FeatherTCP<TConnection, TEncoder, TDecoder> Listen(EndPoint localEndPoint) { return Listen(localEndPoint, new ConnectionOptions()); }
-
-        /// <summary>
-        /// Start a Feather server by listening for connections.
-        /// </summary>
-        /// <returns>Feather instance</returns>
-        public static FeatherTCP<TConnection, TEncoder, TDecoder> Listen(EndPoint localEndPoint, ConnectionOptions options) {
-#if DEBUG
-            if (null == localEndPoint) {
-                throw new ArgumentNullException("endpoint");
-            }
-            if (null == options) {
-                throw new ArgumentNullException("options");
-            }
-#endif
-
-            return new FeatherTCP<TConnection, TEncoder, TDecoder>(localEndPoint, options);
-        }
-
-        /// <summary>
-        /// Connect to a Feather server.
-        /// </summary>
-        /// <returns>Server connection</returns>
-        public static TConnection Connect(IPAddress serverAddress, int port) { return Connect(new IPEndPoint(serverAddress, port)); }
-
-        /// <summary>
-        /// Connect to a Feather server.
-        /// </summary>
-        /// <returns>Server connection</returns>
-        public static TConnection Connect(IPAddress serverAddress, int port, ConnectionOptions options) { return Connect(new IPEndPoint(serverAddress, port), options); }
-
-        /// <summary>
-        /// Connect to a Feather server.
-        /// </summary>
-        /// <returns>Server connection</returns>
-        public static TConnection Connect(string serverName, int port) { return Connect(new DnsEndPoint(serverName, port)); }
-
-        /// <summary>
-        /// Connect to a Feather server.
-        /// </summary>
-        /// <returns>Server connection</returns>
-        public static TConnection Connect(string serverName, int port, ConnectionOptions options) { return Connect(new DnsEndPoint(serverName, port), options); }
-
-        /// <summary>
-        /// Connect to a Feather server.
-        /// </summary>
-        /// <returns>Server connection</returns>
-        public static TConnection Connect(EndPoint endPoint) { return Connect(endPoint, new ConnectionOptions()); }
-
-        /// <summary>
-        /// Connect to a Feather server.
-        /// </summary>
-        /// <returns>Server connection</returns>
-        public static TConnection Connect(EndPoint endPoint, ConnectionOptions options) {
-#if DEBUG
-            if (null == endPoint) {
-                throw new ArgumentNullException("endPoint");
-            }
-            if (null == options) {
-                throw new ArgumentNullException("options");
-            }
-#endif
-
-            // Open socket
-            var clientSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            clientSocket.Connect(endPoint);
-
-            // Create connection
-            var connection = new TConnection();
-            connection.Start(false, new SocketReal(clientSocket), options);
-
-            return connection;
-        }
     }
 }

@@ -28,7 +28,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Use the application-level keep-alive option instead of the standard TCP keep-alive. This works around buggy TCP implementations on some remote devices.
         /// </summary>
-        public bool ApplicationLayerKeepAlive { get; set; } = false;
+        public bool UseApplicationLayerKeepAlive { get; set; } = false;
 
         /// <summary>
         /// Size of receive buffer before blocking occurs.

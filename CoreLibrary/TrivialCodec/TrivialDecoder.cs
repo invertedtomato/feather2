@@ -3,7 +3,7 @@ using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.Feather.TrivialCodec {
     public sealed class TrivialDecoder : IDecoder {
-        public Buffer<byte> SymbolBuffer;
+        public byte[] Symbols;
 
         public int MinHeaderLength { get { return 1; } }
         public int MaxHeaderLength { get { return 1; } }
@@ -19,13 +19,13 @@ namespace InvertedTomato.Feather.TrivialCodec {
         }
 
         public void LoadBuffer(Buffer<byte> buffer) {
-            // Store
-            SymbolBuffer = buffer;
-
             // Burn header
-            if(SymbolBuffer.Dequeue() != SymbolBuffer.Used) {
+            if(buffer.Dequeue() != buffer.Used) {
                 throw new MalformedPayloadException();
             }
+
+            // Store
+            Symbols = buffer.ToArray();
         }
 
         public ReadOnlyBuffer<byte> GetNullPayload() {
