@@ -155,7 +155,16 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public ClassicEncoder WriteBoolean(bool value) {
-            return Write(new byte[] { value ? byte.MaxValue : byte.MinValue });
+            return Write(new byte[] { value ? (byte)0x01 : (byte)0x00 });
+        }
+        public ClassicEncoder WriteNullableBoolean(bool? value) {
+            if (null == value) {
+                WriteBoolean(false);
+            }else {
+                WriteBoolean(true);
+                WriteBoolean(value.Value);
+            }
+            return this;
         }
 
         public ClassicEncoder WriteGuid(Guid value) {

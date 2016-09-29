@@ -227,12 +227,30 @@ namespace InvertedTomato.Feather.Tests {
         public void WriteBoolean_True() {
             var encoder = new ClassicEncoder();
             encoder.WriteBoolean(true);
-            Assert.AreEqual("01-00-FF", encoder.GetBuffer().ToString());
+            Assert.AreEqual("01-00-01", encoder.GetBuffer().ToString());
         }
         [TestMethod]
         public void WriteBoolean_False() {
             var encoder = new ClassicEncoder();
             encoder.WriteBoolean(false);
+            Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableBoolean_True() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableBoolean(true);
+            Assert.AreEqual("02-00-01-01", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableBoolean_False() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableBoolean(false);
+            Assert.AreEqual("02-00-01-00", encoder.GetBuffer().ToString());
+        }
+        [TestMethod]
+        public void WriteNullableBoolean_Null() {
+            var encoder = new ClassicEncoder();
+            encoder.WriteNullableBoolean(null);
             Assert.AreEqual("01-00-00", encoder.GetBuffer().ToString());
         }
 

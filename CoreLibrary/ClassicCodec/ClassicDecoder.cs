@@ -141,8 +141,14 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public bool ReadBoolean() {
-            var check = ReadUInt8();
-            return check > 0;
+            return SymbolBuffer.Dequeue() > 0;
+        }
+        public bool? ReadNullableBoolean() {
+            if (ReadBoolean()) {
+                return ReadBoolean();
+            } else {
+                return null;
+            }
         }
 
         public Guid ReadGuid() {
