@@ -16,27 +16,34 @@ namespace InvertedTomato.Feather.Tests {
             var onConnects = 0;
             var onDisconnects = 0;
             var onMessage = 0;
+            var onRemoteMessages = 0;
+            var onRemoteDisconnects = 0;
 
             var feather = new FeatherTCP<TrivialEncoder, TrivialDecoder>(options);
+
+            // TODO: More tests!!
 
             // Setup event handlers
             feather.OnConnection += (rmt) => {
                 onConnects++;
             };
-            feather.OnDisconnection += (rmt, reason) => {
-                // TODO: check rmt
-                // TODO: check reason
+            feather.OnDisconnection += (Remote<TrivialEncoder, TrivialDecoder> rmt, DisconnectionType reason) => {
+                // Check remote
+                Assert.IsTrue(rmt.RemoteEndPoint.ToString().Contains("127.0.0.1"));
+
+                // Check disconnect reason
+                Assert.AreEqual(DisconnectionType.RemoteDisconnection, reason);
 
                 onDisconnects++;
             };
             feather.OnMessage += (Remote<TrivialEncoder, TrivialDecoder> rmt, TrivialDecoder msg) => {
-                // TODO: check rmt
+                // Check remote
+                Assert.IsTrue(rmt.RemoteEndPoint.ToString().Contains("127.0.0.1"));
 
                 // Check message
                 Assert.AreEqual(1, msg.Symbols.Length);
                 Assert.AreEqual(0x01, msg.Symbols[0]);
-
-                // TODO: check params
+                
                 onMessage++;
             };
 
@@ -54,33 +61,50 @@ namespace InvertedTomato.Feather.Tests {
             Assert.AreEqual(0, onDisconnects);
             Assert.AreEqual(0, onMessage);
 
+            // Setup remote events
+            remote.OnDisconnection = (reason) => {
+                // Check disconnect reason
+                Assert.AreEqual(DisconnectionType.LocalDisconnection, reason);
+
+                onRemoteDisconnects++;
+            };
+            remote.OnMessage = (msg) => {
+                // Check message
+                Assert.AreEqual(1, msg.Symbols.Length);
+                Assert.AreEqual(0x01, msg.Symbols[0]);
+
+                onRemoteMessages++;
+            };
+
             // Send inbound message
             remote.Send(message);
             Thread.Sleep(50);
             Assert.AreEqual(1, onConnects);
             Assert.AreEqual(0, onDisconnects);
             Assert.AreEqual(1, onMessage);
-
+            
             // Send outbound message
             feather.Broadcast(message);
             Thread.Sleep(50);
             Assert.AreEqual(1, onConnects);
             Assert.AreEqual(0, onDisconnects);
-            Assert.AreEqual(3, onMessage);
+            Assert.AreEqual(2, onMessage);
+            Assert.AreEqual(1, onRemoteMessages);
+            Assert.AreEqual(0, onRemoteDisconnects);
 
             // Disconnect
             remote.Disconnect();
             Thread.Sleep(50);
             Assert.AreEqual(1, onConnects);
-            Assert.AreEqual(2, onDisconnects);
-            Assert.AreEqual(3, onMessage);
+            Assert.AreEqual(1, onDisconnects);
+            Assert.AreEqual(2, onMessage);
             Assert.AreEqual(true, remote.IsDisposed);
+            Assert.AreEqual(1, onRemoteMessages);
+            Assert.AreEqual(0, onRemoteDisconnects);
 
             // Dispose
             feather.Dispose();
             Assert.AreEqual(true, feather.IsDisposed);
-
-            // TODO: Testing of Remote events
         }
     }
 }

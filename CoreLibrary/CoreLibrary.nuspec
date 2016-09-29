@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>InvertedTomato.IO.Feather2</id>
+    <title>InvertedTomato.IO.Feather2</title>
+    <version>$version$</version>
+    <authors>InvertedTomato</authors>
+    <owners>InvertedTomato</owners>
+    <licenseUrl>https://github.com/invertedtomato/feather2/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/invertedtomato/feather2</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <summary>Feather core library. Includes stream support. (ALPHA RELEASE)</summary>
+    <description>Feather core library. Includes stream support. (ALPHA RELEASE)</description>
+    <releaseNotes></releaseNotes>
+    <tags>Fast Protocol Archive File</tags>
+  </metadata>
+</package>
