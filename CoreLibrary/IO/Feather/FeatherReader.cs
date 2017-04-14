@@ -1,10 +1,10 @@
 ﻿using System;
 using System.IO;
-using InvertedTomato.Buffers;
-using InvertedTomato;
+using InvertedTomato.IO.Buffers;
+using InvertedTomato.Compression.Integers;
 
-namespace ThreePlay.IO.Feather {
-    public class FeatherReader : IDisposable {
+namespace InvertedTomato.IO.Feather {
+    public class FeatherReader<TCodec> : IDisposable where TCodec : IIntegerCodec, new() {
         /// <summary>
         /// If the file has been disposed.
         /// </summary>
@@ -56,10 +56,10 @@ namespace ThreePlay.IO.Feather {
         /// </summary>
         /// <typeparam name="TDecoder"></typeparam>
         /// <returns></returns>
-        public TDecoder Read<TDecoder>() where TDecoder : IDecoder, new() {
+        public FeatherDecoder Read() {
             try {
                 // Instantiate payload for reading
-                var payload = new TDecoder();
+                var payload = new FeatherDecoder();
 
                 // Prepare the buffer
                 if (HeaderBuffer.MaxCapacity != payload.MaxHeaderLength) {
@@ -68,7 +68,7 @@ namespace ThreePlay.IO.Feather {
 
                 // Read first byte
                 if (Input.Read(HeaderBuffer, 1) != 1) {
-                    return default(TDecoder); // End of file
+                    return new FeatherDecoder(); // End of file
                 }
                 var length = payload.GetPayloadLength(HeaderBuffer);
 

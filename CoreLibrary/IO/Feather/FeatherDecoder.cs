@@ -1,18 +1,16 @@
-﻿using InvertedTomato.Buffers;
+﻿using InvertedTomato.IO.Buffers;
 using System;
-using System.Net;
 using System.Text;
-using ThreePlay.IO.Feather;
 
-namespace InvertedTomato.IO.Feather.ClassicCodec {
-    public class ClassicDecoder : IDecoder {
+namespace InvertedTomato.IO.Feather {
+    public sealed class FeatherDecoder {
         public int MinHeaderLength { get { return 2; } }
         public int MaxHeaderLength { get { return 2; } }
 
         private Buffer<byte> SymbolBuffer;
 
-        public ClassicDecoder() { }
-        public ClassicDecoder(Buffer<byte> symbolBuffer) {
+        public FeatherDecoder() { }
+        public FeatherDecoder(Buffer<byte> symbolBuffer) {
             if (null == symbolBuffer) {
                 throw new ArgumentNullException("symbolBuffer");
             }
@@ -197,7 +195,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
         }
 
         public DateTime ReadDateTimeSimple() {
-            return DateUtility.FromUnixTimestamp(ReadSInt64());
+            return new DateTime(ReadSInt64() * TimeSpan.TicksPerMillisecond);
         }
         public DateTime? ReadNullableDateTimeSimple() {
             if (ReadBoolean()) {
@@ -207,25 +205,11 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             }
         }
 
-        public IPAddress ReadIPAddress() {
-            var length = ReadUInt8();
-            var raw = Read(length);
-
-            return new IPAddress(raw);
-        }
-        public IPAddress ReadNullableIPAddress() {
-            if (SymbolBuffer.Peek() > 0) {
-                return ReadIPAddress();
-            } else {
-                SymbolBuffer.Dequeue();
-                return null;
-            }
-        }
-
         public string ReadString() {
             var length = ReadUInt16();
 
-            return Encoding.UTF8.GetString(SymbolBuffer.DequeueBuffer(length).ToArray());
+            var raw = SymbolBuffer.DequeueBuffer(length).ToArray();
+            return Encoding.UTF8.GetString(raw, 0, raw.Length);
         }
         public string ReadNullableString() {
             if (ReadBoolean()) {

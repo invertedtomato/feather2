@@ -1,23 +1,22 @@
-﻿using InvertedTomato.Buffers;
+﻿using InvertedTomato.IO.Buffers;
 using System;
 using System.Net;
 using System.Text;
-using ThreePlay.IO.Feather;
 
-namespace InvertedTomato.IO.Feather.ClassicCodec {
-    public class ClassicEncoder : IEncoder {
+namespace InvertedTomato.IO.Feather {
+    public sealed class FeatherEncoder {
         private Buffer<byte> SymbolBuffer = new Buffer<byte>(8);
 
-        public ClassicEncoder() {
+        public FeatherEncoder() {
             // Reserve space for length
             SymbolBuffer.Enqueue(0);
             SymbolBuffer.Enqueue(0);
         }
 
-        public ClassicEncoder WriteUInt8(byte value) {
+        public FeatherEncoder WriteUInt8(byte value) {
             return Write(new byte[] { value });
         }
-        public ClassicEncoder WriteNullableUInt8(byte? value) {
+        public FeatherEncoder WriteNullableUInt8(byte? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -28,10 +27,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteSInt8(sbyte value) {
+        public FeatherEncoder WriteSInt8(sbyte value) {
             return Write(new byte[] { (byte)value });
         }
-        public ClassicEncoder WriteNullableSInt8(sbyte? value) {
+        public FeatherEncoder WriteNullableSInt8(sbyte? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -42,10 +41,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteUInt16(ushort value) {
+        public FeatherEncoder WriteUInt16(ushort value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public ClassicEncoder WriteNullableUInt16(ushort? value) {
+        public FeatherEncoder WriteNullableUInt16(ushort? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -56,10 +55,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteSInt16(short value) {
+        public FeatherEncoder WriteSInt16(short value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public ClassicEncoder WriteNullableSInt16(short? value) {
+        public FeatherEncoder WriteNullableSInt16(short? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -70,10 +69,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteUInt32(uint value) {
+        public FeatherEncoder WriteUInt32(uint value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public ClassicEncoder WriteNullableUInt32(uint? value) {
+        public FeatherEncoder WriteNullableUInt32(uint? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -84,10 +83,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteSInt32(int value) {
+        public FeatherEncoder WriteSInt32(int value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public ClassicEncoder WriteNullableSInt32(int? value) {
+        public FeatherEncoder WriteNullableSInt32(int? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -98,10 +97,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteUInt64(ulong value) {
+        public FeatherEncoder WriteUInt64(ulong value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public ClassicEncoder WriteNullableUInt64(ulong? value) {
+        public FeatherEncoder WriteNullableUInt64(ulong? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -112,10 +111,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteSInt64(long value) {
+        public FeatherEncoder WriteSInt64(long value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public ClassicEncoder WriteNullableSInt64(long? value) {
+        public FeatherEncoder WriteNullableSInt64(long? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -126,10 +125,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteFloat(float value) {
+        public FeatherEncoder WriteFloat(float value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public ClassicEncoder WriteNullableFloat(float? value) {
+        public FeatherEncoder WriteNullableFloat(float? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -140,10 +139,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteDouble(double value) {
+        public FeatherEncoder WriteDouble(double value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public ClassicEncoder WriteNullableDouble(double? value) {
+        public FeatherEncoder WriteNullableDouble(double? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -154,23 +153,23 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteBoolean(bool value) {
+        public FeatherEncoder WriteBoolean(bool value) {
             return Write(new byte[] { value ? (byte)0x01 : (byte)0x00 });
         }
-        public ClassicEncoder WriteNullableBoolean(bool? value) {
+        public FeatherEncoder WriteNullableBoolean(bool? value) {
             if (null == value) {
                 WriteBoolean(false);
-            }else {
+            } else {
                 WriteBoolean(true);
                 WriteBoolean(value.Value);
             }
             return this;
         }
 
-        public ClassicEncoder WriteGuid(Guid value) {
+        public FeatherEncoder WriteGuid(Guid value) {
             return Write(value.ToByteArray());
         }
-        public ClassicEncoder WriteNullableGuid(Guid? value) {
+        public FeatherEncoder WriteNullableGuid(Guid? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -181,10 +180,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteTime(TimeSpan value) {
+        public FeatherEncoder WriteTime(TimeSpan value) {
             return WriteSInt64(value.Ticks);
         }
-        public ClassicEncoder WriteNullableTime(TimeSpan? value) {
+        public FeatherEncoder WriteNullableTime(TimeSpan? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -195,10 +194,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteTimeSimple(TimeSpan value) {
+        public FeatherEncoder WriteTimeSimple(TimeSpan value) {
             return WriteSInt64((long)value.TotalSeconds);
         }
-        public ClassicEncoder WriteNullableTimeSimple(TimeSpan? value) {
+        public FeatherEncoder WriteNullableTimeSimple(TimeSpan? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -209,10 +208,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteDateTime(DateTime value) {
+        public FeatherEncoder WriteDateTime(DateTime value) {
             return WriteSInt64(value.Ticks);
         }
-        public ClassicEncoder WriteNullableDateTime(DateTime? value) {
+        public FeatherEncoder WriteNullableDateTime(DateTime? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -223,10 +222,10 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder WriteDateTimeSimple(DateTime value) {
-            return WriteUInt64(value.ToUnixTimeAsUInt64());
+        public FeatherEncoder WriteDateTimeSimple(DateTime value) {
+            return WriteSInt64(value.Ticks / TimeSpan.TicksPerMillisecond); // TODO
         }
-        public ClassicEncoder WriteNullableDateTimeSimple(DateTime? value) {
+        public FeatherEncoder WriteNullableDateTimeSimple(DateTime? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -236,30 +235,8 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
 
             return this;
         }
-
-        public ClassicEncoder WriteIPAddress(IPAddress value) {
-            if (null == value) {
-                throw new ArgumentNullException("value");
-            }
-
-            var raw = value.GetAddressBytes();
-
-            WriteUInt8((byte)raw.Length);
-            Write(raw);
-
-            return this;
-        }
-        public ClassicEncoder WriteNullableIPAddress(IPAddress value) {
-            if (null == value) {
-                WriteUInt8(0);
-            } else {
-                WriteIPAddress(value);
-            }
-
-            return this;
-        }
-
-        public ClassicEncoder WriteString(string value) {
+        
+        public FeatherEncoder WriteString(string value) {
             if (null == value) {
                 throw new ArgumentNullException("value");
             }
@@ -275,7 +252,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
 
             return this;
         }
-        public ClassicEncoder WriteNullableString(string value) {
+        public FeatherEncoder WriteNullableString(string value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -286,7 +263,7 @@ namespace InvertedTomato.IO.Feather.ClassicCodec {
             return this;
         }
 
-        public ClassicEncoder Write(byte[] value) {
+        public FeatherEncoder Write(byte[] value) {
             if (null == value) {
                 throw new ArgumentNullException("value");
             }

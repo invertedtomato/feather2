@@ -1,4 +1,6 @@
-﻿namespace ThreePlay.IO.Feather {
+﻿using System;
+
+namespace InvertedTomato.IO.Feather {
     public class Options {
         /// <summary>
         /// Maximum size to allow for encoded message.

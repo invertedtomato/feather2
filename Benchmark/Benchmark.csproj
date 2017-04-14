@@ -56,12 +56,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>
-  <ItemGroup>
-    <ProjectReference Include="..\CoreLibrary\CoreLibrary.csproj">
-      <Project>{b72c27be-ee48-4a21-9a02-7c0211b9cacc}</Project>
-      <Name>CoreLibrary</Name>
-    </ProjectReference>
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\ManagedXZ.1.0.0\build\ManagedXZ.targets" Condition="Exists('..\packages\ManagedXZ.1.0.0\build\ManagedXZ.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

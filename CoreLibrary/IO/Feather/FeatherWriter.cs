@@ -1,9 +1,10 @@
 ﻿using System;
 using System.IO;
-using InvertedTomato.Buffers;
+using InvertedTomato.IO.Buffers;
+using InvertedTomato.Compression.Integers;
 
-namespace ThreePlay.IO.Feather {
-    public class FeatherWriter : IDisposable {
+namespace InvertedTomato.IO.Feather {
+    public class FeatherWriter<TCodec> : IDisposable where TCodec : IIntegerCodec, new() {
         /// <summary>
         /// If the file has been disposed.
         /// </summary>
@@ -30,7 +31,7 @@ namespace ThreePlay.IO.Feather {
             Options = options;
         }
 
-        public void Write(IEncoder payload) {
+        public void Write(FeatherEncoder payload) {
 #if DEBUG
             if (null == payload) {
                 throw new ArgumentNullException("payload");
@@ -40,10 +41,10 @@ namespace ThreePlay.IO.Feather {
             }
 #endif
 
-            Write(new IEncoder[] { payload });
+            Write(new FeatherEncoder[] { payload });
         }
 
-        public void Write(IEncoder[] payloads) {
+        public void Write(FeatherEncoder[] payloads) {
 #if DEBUG
             if (null == payloads) {
                 throw new ArgumentNullException("payloads");

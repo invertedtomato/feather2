@@ -3,12 +3,10 @@ using System;
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
-using ThreePlay.IO.Feather;
 
 namespace InvertedTomato.Net.Feather {
-    public sealed class FeatherTCP<TEncoder, TDecoder> : IDisposable
-        where TEncoder : IEncoder
-        where TDecoder : IDecoder, new() {
+    public sealed class FeatherTCP<TCodec> : IDisposable
+        where TCodec : IIntegerCodec, new() {
 
         /// <summary>
         /// When a client connects.
