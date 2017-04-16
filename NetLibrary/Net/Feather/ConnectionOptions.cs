@@ -1,8 +1,7 @@
-﻿using System;
+﻿using InvertedTomato.IO.Feather;
+using System;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
-using ThreePlay.IO.Feather;
-
 namespace InvertedTomato.Net.Feather {
     public sealed class ConnectionOptions : Options {
         /// <summary>

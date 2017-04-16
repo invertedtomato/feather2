@@ -1,22 +1,28 @@
-﻿using InvertedTomato.IO.Buffers;
+﻿using InvertedTomato.Compression.Integers;
+using InvertedTomato.IO.Buffers;
 using System;
 using System.Text;
 
 namespace InvertedTomato.IO.Feather {
-    public sealed class FeatherDecoder {
-        public int MinHeaderLength { get { return 2; } }
-        public int MaxHeaderLength { get { return 2; } }
+    public sealed class MessageDecoder<TCodec> where TCodec : IIntegerCodec, new() {
+        private Buffer<ulong> Symbols;
 
-        private Buffer<byte> SymbolBuffer;
-
-        public FeatherDecoder() { }
-        public FeatherDecoder(Buffer<byte> symbolBuffer) {
-            if (null == symbolBuffer) {
-                throw new ArgumentNullException("symbolBuffer");
+        public MessageDecoder() {
+            Symbols = new Buffer<ulong>(0);
+        }
+        public MessageDecoder(Buffer<byte> payload) {
+#if DEBUG
+            if (null == payload) {
+                throw new ArgumentNullException("payload");
             }
-
-            // Load buffer
-            LoadBuffer(symbolBuffer);
+#endif
+            
+            // Decompress payload into symbols
+            var codec = new TCodec();
+            Symbols = new Buffer<ulong>(payload.Used);
+            while (!codec.Decompress(payload, Symbols)) {
+                Symbols = Symbols.Resize(Symbols.MaxCapacity * 2);
+            }
         }
 
 
@@ -218,44 +224,7 @@ namespace InvertedTomato.IO.Feather {
                 return null;
             }
         }
-
-        public byte[] Read(int length) {
-            if (length < 0) {
-                throw new ArgumentOutOfRangeException("Must be at least 0.");
-            }
-
-            return SymbolBuffer.DequeueBuffer(length).ToArray();
-        }
-        public int GetPayloadLength(ReadOnlyBuffer<byte> buffer) {
-            if (null == buffer) {
-                throw new ArgumentNullException("buffer");
-            }
-
-            // If header is missing, return INSUFFICENT
-            if (buffer.Used < 2) {
-                return 0;
-            }
-
-            // Read length header
-            var lengthHeader = buffer.PeekBuffer(2);
-            var length = BitConverter.ToUInt16(lengthHeader.GetUnderlying(), lengthHeader.Start);
-            return length + 2; // Include header length with response
-        }
-
-        public void LoadBuffer(Buffer<byte> buffer) {
-            if (null == buffer) {
-                throw new ArgumentNullException("buffer");
-            }
-
-            // Store
-            SymbolBuffer = buffer;
-
-            // Burn length header
-            SymbolBuffer.DequeueBuffer(2);
-        }
-
-        public ReadOnlyBuffer<byte> GetNullPayload() {
-            return new Buffer<byte>(new byte[] { 0, 0 });
-        }
+        
+        // TODO: byte array
     }
 }

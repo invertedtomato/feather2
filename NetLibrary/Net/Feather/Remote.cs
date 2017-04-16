@@ -48,7 +48,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// When a message arrives from this remote.
         /// </summary>
-        public Action<FeatherDecoder> OnMessage;
+        public Action<MessageDecoder> OnMessage;
 
         /// <summary>
         /// Configuration options
@@ -82,9 +82,9 @@ namespace InvertedTomato.Net.Feather {
 
         private Buffer<byte> PayloadBuffer = null;
 
-        private FeatherDecoder NextMessage;
+        private MessageDecoder NextMessage;
 
-        public void Start(bool isServerConnection, ISocket clientSocket, ConnectionOptions options, Action<DisconnectionType> onDisconnection, Action<FeatherDecoder> onMessage) {
+        public void Start(bool isServerConnection, ISocket clientSocket, ConnectionOptions options, Action<DisconnectionType> onDisconnection, Action<MessageDecoder> onMessage) {
 #if DEBUG
             if (null == options) {
                 throw new ArgumentNullException("options");
@@ -129,7 +129,7 @@ namespace InvertedTomato.Net.Feather {
             }
 
             // Setup receive
-            NextMessage = new FeatherDecoder();
+            NextMessage = new MessageDecoder();
             HeaderBuffer = new Buffer<byte>(NextMessage.MaxHeaderLength);
 
             // Seed receiving
@@ -139,7 +139,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Send single payload to remote endpoint.
         /// </summary>    
-        public void Send(FeatherEncoder message) {
+        public void Send(MessageEncoder message) {
 #if DEBUG
             if (null == message) {
                 throw new ArgumentNullException("payload");
@@ -152,7 +152,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Send single payload to remote endpoint and execute a callback when done.
         /// </summary>
-        public void Send(FeatherEncoder message, Action done) {
+        public void Send(MessageEncoder message, Action done) {
 #if DEBUG
             if (null == message) {
                 throw new ArgumentNullException("payload");
@@ -165,7 +165,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Send multiple payloads to remote endpoint.
         /// </summary>    
-        public void Send(FeatherEncoder[] messages) {
+        public void Send(MessageEncoder[] messages) {
 #if DEBUG
             if (null == messages) {
                 throw new ArgumentNullException("payload");
@@ -178,7 +178,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Send multiple payloads to remote endpoint and execute a callback when done.
         /// </summary>
-        public void Send(FeatherEncoder[] messages, Action done) {
+        public void Send(MessageEncoder[] messages, Action done) {
 #if DEBUG
             if (null == messages) {
                 throw new ArgumentNullException("messages");
@@ -329,7 +329,7 @@ namespace InvertedTomato.Net.Feather {
             OnMessage?.Invoke(NextMessage);
 
             // Reset for next message
-            NextMessage = new FeatherDecoder();
+            NextMessage = new MessageDecoder();
 
             // Receive next header
             ReceiveHeaderChunk();

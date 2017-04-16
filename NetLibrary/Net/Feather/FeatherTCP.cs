@@ -1,4 +1,6 @@
-﻿using InvertedTomato.Testable.Sockets;
+﻿using InvertedTomato.Compression.Integers;
+using InvertedTomato.IO.Feather;
+using InvertedTomato.Testable;
 using System;
 using System.Collections.Concurrent;
 using System.Net;
@@ -11,17 +13,17 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// When a client connects.
         /// </summary>
-        public Action<Remote<TEncoder, TDecoder>> OnConnection;
+        public Action<Remote> OnConnection;
 
         /// <summary>
         /// When a client disconnects.
         /// </summary>
-        public Action<Remote<TEncoder, TDecoder>, DisconnectionType> OnDisconnection;
+        public Action<Remote, DisconnectionType> OnDisconnection;
 
         /// <summary>
         /// When a inbound message arrives
         /// </summary>
-        public Action<Remote<TEncoder, TDecoder>, TDecoder> OnMessage;
+        public Action<Remote, MessageDecoder> OnMessage;
 
         /// <summary>
         /// Has the server been disposed.
@@ -41,7 +43,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// All active remotes (may contain some very recently disconnected.)
         /// </summary>
-        private ConcurrentDictionary<EndPoint, Remote<TEncoder, TDecoder>> Remotes = new ConcurrentDictionary<EndPoint, Remote<TEncoder, TDecoder>>();
+        private ConcurrentDictionary<EndPoint, Remote> Remotes = new ConcurrentDictionary<EndPoint, Remote>();
 
 
         /// <summary>
@@ -96,19 +98,19 @@ namespace InvertedTomato.Net.Feather {
         /// Connect to a Feather server.
         /// </summary>
         /// <returns>Server connection</returns>
-        public Remote<TEncoder, TDecoder> Connect(IPAddress serverAddress, int port) { return Connect(new IPEndPoint(serverAddress, port)); }
+        public Remote Connect(IPAddress serverAddress, int port) { return Connect(new IPEndPoint(serverAddress, port)); }
 
         /// <summary>
         /// Connect to a Feather server.
         /// </summary>
         /// <returns>Server connection</returns>
-        public Remote<TEncoder, TDecoder> Connect(string serverName, int port) { return Connect(new DnsEndPoint(serverName, port)); }
+        public Remote Connect(string serverName, int port) { return Connect(new DnsEndPoint(serverName, port)); }
 
         /// <summary>
         /// Connect to a Feather server.
         /// </summary>
         /// <returns>Server connection</returns>
-        public Remote<TEncoder, TDecoder> Connect(EndPoint endPoint) {
+        public Remote Connect(EndPoint endPoint) {
 #if DEBUG
             if (null == endPoint) {
                 throw new ArgumentNullException("endPoint");
@@ -120,7 +122,7 @@ namespace InvertedTomato.Net.Feather {
             clientSocket.Connect(endPoint);
 
             // Create remote
-            var remote = Remotes[endPoint] = new Remote<TEncoder, TDecoder>();
+            var remote = Remotes[endPoint] = new Remote();
             remote.Start(false, new SocketReal(clientSocket), Options,
                 (reason) => {
                     OnDisconnection(remote, reason);
@@ -133,17 +135,17 @@ namespace InvertedTomato.Net.Feather {
         }
 
 
-        public void Broadcast(TEncoder message) {
+        public void Broadcast(MessageEncoder message) {
 #if DEBUG
             if (null == message) {
                 throw new ArgumentNullException("payload");
             }
 #endif
 
-            Broadcast(new TEncoder[] { message });
+            Broadcast(new MessageEncoder[] { message });
         }
 
-        public void Broadcast(TEncoder[] messages) {
+        public void Broadcast(MessageEncoder[] messages) {
 #if DEBUG
             if (null == messages) {
                 throw new ArgumentNullException("payload");
@@ -151,7 +153,9 @@ namespace InvertedTomato.Net.Feather {
 #endif
 
             // Send to all remotes
-            Remotes.Each(a => a.Value.Send(messages));
+            foreach (var remote in Remotes) {
+                remote.Send(messages);
+            }
         }
 
 
@@ -167,7 +171,7 @@ namespace InvertedTomato.Net.Feather {
                 var endPoint = clientSocket.RemoteEndPoint;
 
                 // Create remote
-                var remote = Remotes[endPoint] = new Remote<TEncoder, TDecoder>();
+                var remote = Remotes[endPoint] = new Remote();
                 remote.Start(true, new SocketReal(clientSocket), Options,
                     (reason) => {
                         OnDisconnection(remote, reason);

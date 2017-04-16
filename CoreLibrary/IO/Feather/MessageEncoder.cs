@@ -1,22 +1,36 @@
-﻿using InvertedTomato.IO.Buffers;
+﻿using InvertedTomato.Compression.Integers;
+using InvertedTomato.IO.Buffers;
 using System;
 using System.Net;
 using System.Text;
 
 namespace InvertedTomato.IO.Feather {
-    public sealed class FeatherEncoder {
-        private Buffer<byte> SymbolBuffer = new Buffer<byte>(8);
+    public sealed class MessageEncoder<TCodec> where TCodec : IIntegerCodec, new() {
+        private const int SymbolBufferDefaultSize = 8;
+        private const int SymbolBufferGrowthRate = 2;
 
-        public FeatherEncoder() {
-            // Reserve space for length
-            SymbolBuffer.Enqueue(0);
-            SymbolBuffer.Enqueue(0);
+        private Buffer<ulong> Symbols;
+        private Buffer<byte> Payload = null;
+
+        public bool IsReadOnly { get { return null != Payload; } }
+
+        public MessageEncoder() {
+            Symbols = new Buffer<ulong>(SymbolBufferDefaultSize);
+        }
+        public MessageEncoder(int initialCapacity) {
+#if DEBUG
+            if (initialCapacity < 1) {
+                throw new ArgumentOutOfRangeException("Must be at least 1 byte.", "initialCapacity");
+            }
+#endif
+
+            Symbols = new Buffer<ulong>(initialCapacity);
         }
 
-        public FeatherEncoder WriteUInt8(byte value) {
+        public MessageEncoder<TCodec> WriteUInt8(byte value) {
             return Write(new byte[] { value });
         }
-        public FeatherEncoder WriteNullableUInt8(byte? value) {
+        public MessageEncoder<TCodec> WriteNullableUInt8(byte? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -27,10 +41,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteSInt8(sbyte value) {
+        public MessageEncoder<TCodec> WriteSInt8(sbyte value) {
             return Write(new byte[] { (byte)value });
         }
-        public FeatherEncoder WriteNullableSInt8(sbyte? value) {
+        public MessageEncoder<TCodec> WriteNullableSInt8(sbyte? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -41,10 +55,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteUInt16(ushort value) {
+        public MessageEncoder<TCodec> WriteUInt16(ushort value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public FeatherEncoder WriteNullableUInt16(ushort? value) {
+        public MessageEncoder<TCodec> WriteNullableUInt16(ushort? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -55,10 +69,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteSInt16(short value) {
+        public MessageEncoder<TCodec> WriteSInt16(short value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public FeatherEncoder WriteNullableSInt16(short? value) {
+        public MessageEncoder<TCodec> WriteNullableSInt16(short? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -69,10 +83,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteUInt32(uint value) {
+        public MessageEncoder<TCodec> WriteUInt32(uint value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public FeatherEncoder WriteNullableUInt32(uint? value) {
+        public MessageEncoder<TCodec> WriteNullableUInt32(uint? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -83,10 +97,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteSInt32(int value) {
+        public MessageEncoder<TCodec> WriteSInt32(int value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public FeatherEncoder WriteNullableSInt32(int? value) {
+        public MessageEncoder<TCodec> WriteNullableSInt32(int? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -97,10 +111,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteUInt64(ulong value) {
+        public MessageEncoder<TCodec> WriteUInt64(ulong value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public FeatherEncoder WriteNullableUInt64(ulong? value) {
+        public MessageEncoder<TCodec> WriteNullableUInt64(ulong? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -111,10 +125,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteSInt64(long value) {
+        public MessageEncoder<TCodec> WriteSInt64(long value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public FeatherEncoder WriteNullableSInt64(long? value) {
+        public MessageEncoder<TCodec> WriteNullableSInt64(long? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -125,10 +139,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteFloat(float value) {
+        public MessageEncoder<TCodec> WriteFloat(float value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public FeatherEncoder WriteNullableFloat(float? value) {
+        public MessageEncoder<TCodec> WriteNullableFloat(float? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -139,10 +153,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteDouble(double value) {
+        public MessageEncoder<TCodec> WriteDouble(double value) {
             return Write(BitConverter.GetBytes(value));
         }
-        public FeatherEncoder WriteNullableDouble(double? value) {
+        public MessageEncoder<TCodec> WriteNullableDouble(double? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -153,10 +167,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteBoolean(bool value) {
+        public MessageEncoder<TCodec> WriteBoolean(bool value) {
             return Write(new byte[] { value ? (byte)0x01 : (byte)0x00 });
         }
-        public FeatherEncoder WriteNullableBoolean(bool? value) {
+        public MessageEncoder<TCodec> WriteNullableBoolean(bool? value) {
             if (null == value) {
                 WriteBoolean(false);
             } else {
@@ -166,10 +180,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteGuid(Guid value) {
+        public MessageEncoder<TCodec> WriteGuid(Guid value) {
             return Write(value.ToByteArray());
         }
-        public FeatherEncoder WriteNullableGuid(Guid? value) {
+        public MessageEncoder<TCodec> WriteNullableGuid(Guid? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -180,10 +194,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteTime(TimeSpan value) {
+        public MessageEncoder<TCodec> WriteTime(TimeSpan value) {
             return WriteSInt64(value.Ticks);
         }
-        public FeatherEncoder WriteNullableTime(TimeSpan? value) {
+        public MessageEncoder<TCodec> WriteNullableTime(TimeSpan? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -194,10 +208,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteTimeSimple(TimeSpan value) {
+        public MessageEncoder<TCodec> WriteTimeSimple(TimeSpan value) {
             return WriteSInt64((long)value.TotalSeconds);
         }
-        public FeatherEncoder WriteNullableTimeSimple(TimeSpan? value) {
+        public MessageEncoder<TCodec> WriteNullableTimeSimple(TimeSpan? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -208,10 +222,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteDateTime(DateTime value) {
+        public MessageEncoder<TCodec> WriteDateTime(DateTime value) {
             return WriteSInt64(value.Ticks);
         }
-        public FeatherEncoder WriteNullableDateTime(DateTime? value) {
+        public MessageEncoder<TCodec> WriteNullableDateTime(DateTime? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -222,10 +236,10 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder WriteDateTimeSimple(DateTime value) {
+        public MessageEncoder<TCodec> WriteDateTimeSimple(DateTime value) {
             return WriteSInt64(value.Ticks / TimeSpan.TicksPerMillisecond); // TODO
         }
-        public FeatherEncoder WriteNullableDateTimeSimple(DateTime? value) {
+        public MessageEncoder<TCodec> WriteNullableDateTimeSimple(DateTime? value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -235,8 +249,8 @@ namespace InvertedTomato.IO.Feather {
 
             return this;
         }
-        
-        public FeatherEncoder WriteString(string value) {
+
+        public MessageEncoder<TCodec> WriteString(string value) {
             if (null == value) {
                 throw new ArgumentNullException("value");
             }
@@ -252,7 +266,7 @@ namespace InvertedTomato.IO.Feather {
 
             return this;
         }
-        public FeatherEncoder WriteNullableString(string value) {
+        public MessageEncoder<TCodec> WriteNullableString(string value) {
             if (null == value) {
                 WriteUInt8(0);
             } else {
@@ -263,34 +277,38 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public FeatherEncoder Write(byte[] value) {
-            if (null == value) {
-                throw new ArgumentNullException("value");
+        // TODO: byte array
+
+        private void Write(ulong value) {
+#if DEBUG
+            if (IsReadOnly) {
+                throw new InvalidOperationException("Message has been submitted and encoder is now ready-only.");
+            }
+#endif
+
+            // If symbol buffer is full...
+            if (Symbols.IsFull) {
+                // Grow it
+                Symbols = Symbols.Resize(Symbols.MaxCapacity * SymbolBufferGrowthRate);
             }
 
-            // If there isn't enough space...
-            if (SymbolBuffer.Available < value.Length) {
-                // Calculate new size
-                var size = Math.Max(SymbolBuffer.MaxCapacity * 2, SymbolBuffer.Used + value.Length); // Either double the size, or make it big enough - whichever is greater
-
-                // Resize
-                SymbolBuffer = SymbolBuffer.Resize(size);
-            }
-
-            // Enqueue
-            SymbolBuffer.EnqueueArray(value);
-
-            return this;
+            // Add to queue
+            Symbols.Enqueue(value);
         }
 
-        public ReadOnlyBuffer<byte> GetBuffer() {
-            // Update length header
-            var lengthHeader = BitConverter.GetBytes((ushort)(SymbolBuffer.Used - 2));
-            SymbolBuffer.Replace(0, lengthHeader[0]);
-            SymbolBuffer.Replace(1, lengthHeader[1]);
+        public ReadOnlyBuffer<byte> GetPayload() {
+            // If payload hasn't been computed
+            if (null == Payload) {
 
-            // Return buffer
-            return SymbolBuffer;
+                // Compress
+                var codec = new TCodec();
+                Payload = new Buffer<byte>(Symbols.Used * 2);
+                while (!codec.Compress(Symbols, Payload)) {
+                    Payload = Payload.Resize(Payload.MaxCapacity * 2);
+                }
+            }
+
+            return Payload;
         }
     }
 }

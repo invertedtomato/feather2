@@ -56,10 +56,10 @@ namespace InvertedTomato.IO.Feather {
         /// </summary>
         /// <typeparam name="TDecoder"></typeparam>
         /// <returns></returns>
-        public FeatherDecoder Read() {
+        public MessageDecoder Read() {
             try {
                 // Instantiate payload for reading
-                var payload = new FeatherDecoder();
+                var payload = new MessageDecoder();
 
                 // Prepare the buffer
                 if (HeaderBuffer.MaxCapacity != payload.MaxHeaderLength) {
@@ -68,7 +68,7 @@ namespace InvertedTomato.IO.Feather {
 
                 // Read first byte
                 if (Input.Read(HeaderBuffer, 1) != 1) {
-                    return new FeatherDecoder(); // End of file
+                    return new MessageDecoder(); // End of file
                 }
                 var length = payload.GetPayloadLength(HeaderBuffer);
 

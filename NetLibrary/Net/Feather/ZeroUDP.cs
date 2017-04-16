@@ -5,8 +5,6 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
-using ThreePlay.IO.Zero;
-using ThreePlay.IO.Zero.Messages;
 
 namespace ThreePlay.Net.Zero {
     public sealed class ZeroUDP {

@@ -31,7 +31,7 @@ namespace InvertedTomato.IO.Feather {
             Options = options;
         }
 
-        public void Write(FeatherEncoder payload) {
+        public void Write(MessageEncoder<TCodec> payload) {
 #if DEBUG
             if (null == payload) {
                 throw new ArgumentNullException("payload");
@@ -41,10 +41,10 @@ namespace InvertedTomato.IO.Feather {
             }
 #endif
 
-            Write(new FeatherEncoder[] { payload });
+            Write(new MessageEncoder<TCodec>[] { payload });
         }
 
-        public void Write(FeatherEncoder[] payloads) {
+        public void Write(MessageEncoder<TCodec>[] payloads) {
 #if DEBUG
             if (null == payloads) {
                 throw new ArgumentNullException("payloads");
@@ -62,11 +62,24 @@ namespace InvertedTomato.IO.Feather {
                 }
 #endif
 
-                // Encode payload
-                var buffer = payload.GetBuffer();
+                // Get payload
+                var payloadBuffer = payload.GetPayload();
 
-                // Write to output
-                Output.Write(buffer);
+                // Compress frame header
+                var input = new Buffer<ulong>(payloadBuffer.Used);
+                var frameBuffer = new Buffer<byte>(2);
+                var codec = new TCodec();
+                while (!codec.Compress(input, frameBuffer)) {
+                    frameBuffer = frameBuffer.Resize(frameBuffer.MaxCapacity * 2);
+                }
+                
+                lock (Output) {
+                    // Write frame header
+                    Output.Write(frameBuffer);
+
+                    // Write payload
+                    Output.Write(payloadBuffer);
+                }
             }
         }
 
