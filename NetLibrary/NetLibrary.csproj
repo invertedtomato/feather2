@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="InvertedTomato.Buffers" Version="1.0.6" />
+    <PackageReference Include="InvertedTomato.Buffers" Version="1.0.9" />
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
     <PackageReference Include="System.Threading.Timer" Version="4.3.0" />
   </ItemGroup>

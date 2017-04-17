@@ -1,0 +1,2 @@
+Use VLQ for framing header (don't try and use the codec - it's seemingly impossible to know the header length from this perspective)
+Wire up IIntegerCodec for compression.
