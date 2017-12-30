@@ -8,13 +8,13 @@ using InvertedTomato.IO.Feather.CSVCodec;
 namespace InvertedTomato.Feather.Tests {
     [TestClass]
     public class CSVDecoderTests {
-        public string[][] DecodeAllSymbolSets(string value) {
+        public String[][] DecodeAllSymbolSets(String value) {
             // Create buffer
-            var buffer = new Buffer<byte>(Encoding.UTF8.GetBytes(value));
+            var buffer = new Buffer<Byte>(Encoding.UTF8.GetBytes(value));
 
             // Call decode until nothing more is returned
-            var symbolSets = new List<string[]>();
-            Buffer<string> symbols;
+            var symbolSets = new List<String[]>();
+            Buffer<String> symbols;
             while (null != (symbols = CSVDecoder.Decode(buffer))) {
                 symbolSets.Add(symbols.ToArray());
             }
@@ -22,12 +22,12 @@ namespace InvertedTomato.Feather.Tests {
             // Return as array
             return symbolSets.ToArray();
         }
-        public string[] DecodeOnlySymbolSet(string value) {
+        public String[] DecodeOnlySymbolSet(String value) {
             var symbolSets = DecodeAllSymbolSets(value);
             Assert.AreEqual(1, symbolSets.Length);
             return symbolSets[0];
         }
-        public string DecodeOnlySymbol(string value) {
+        public String DecodeOnlySymbol(String value) {
             var symbols = DecodeOnlySymbolSet(value);
             Assert.AreEqual(1, symbols.Length);
             return symbols[0];
@@ -36,7 +36,7 @@ namespace InvertedTomato.Feather.Tests {
 
         [TestMethod]
         public void Decode_Complete() {
-            var buffer = new Buffer<byte>(Encoding.UTF8.GetBytes("a\n"));
+            var buffer = new Buffer<Byte>(Encoding.UTF8.GetBytes("a\n"));
             Assert.AreEqual(0, buffer.Start);
             Assert.AreEqual(2, buffer.Used);
 
@@ -88,63 +88,63 @@ namespace InvertedTomato.Feather.Tests {
 
         [TestMethod]
         public void ReadInteger_10() {
-            var reader = new CSVDecoder(new string[] { "10" });
+            var reader = new CSVDecoder(new String[] { "10" });
             Assert.AreEqual(10, reader.ReadInteger());
         }
         [TestMethod]
         public void ReadInteger_10_10() {
-            var reader = new CSVDecoder(new string[] { "10", "10" });
+            var reader = new CSVDecoder(new String[] { "10", "10" });
             Assert.AreEqual(10, reader.ReadInteger());
             Assert.AreEqual(10, reader.ReadInteger());
         }
 
         [TestMethod]
         public void ReadDecimal_10Point1() {
-            var reader = new CSVDecoder(new string[] { "10.1" });
-            Assert.AreEqual((decimal)10.1, reader.ReadDecimal());
+            var reader = new CSVDecoder(new String[] { "10.1" });
+            Assert.AreEqual((Decimal)10.1, reader.ReadDecimal());
         }
 
         [TestMethod]
         public void ReadBoolean_True() {
-            var reader = new CSVDecoder(new string[] { "true" });
+            var reader = new CSVDecoder(new String[] { "true" });
             Assert.AreEqual(true, reader.ReadBoolean());
         }
         [TestMethod]
         public void ReadBoolean_False() {
-            var reader = new CSVDecoder(new string[] { "false" });
+            var reader = new CSVDecoder(new String[] { "false" });
             Assert.AreEqual(false, reader.ReadBoolean());
         }
 
         [TestMethod]
         public void ReadDateTime_1() {
-            var reader = new CSVDecoder(new string[] { "2000-01-01 01:02:03Z" });
+            var reader = new CSVDecoder(new String[] { "2000-01-01 01:02:03Z" });
             Assert.AreEqual(new DateTime(2000, 1, 1, 1, 2, 3, DateTimeKind.Utc), reader.ReadDateTime().ToUniversalTime());
         }
 
         [TestMethod]
         public void ReadTime_1() {
-            var reader = new CSVDecoder(new string[] { "00:00:01" });
+            var reader = new CSVDecoder(new String[] { "00:00:01" });
             Assert.AreEqual(new TimeSpan(0, 0, 1), reader.ReadTime());
         }
 
         [TestMethod]
         public void ReadString_Basic() {
-            var reader = new CSVDecoder(new string[] { "test" });
+            var reader = new CSVDecoder(new String[] { "test" });
             Assert.AreEqual("test", reader.ReadString());
         }
         [TestMethod]
         public void ReadString_Commas() {
-            var reader = new CSVDecoder(new string[] { "a,b,c" });
+            var reader = new CSVDecoder(new String[] { "a,b,c" });
             Assert.AreEqual("a,b,c", reader.ReadString());
         }
         [TestMethod]
         public void ReadString_Newline() {
-            var reader = new CSVDecoder(new string[] { "a\nb" });
+            var reader = new CSVDecoder(new String[] { "a\nb" });
             Assert.AreEqual("a\nb", reader.ReadString());
         }
         [TestMethod]
         public void ReadString_Empty() {
-            var reader = new CSVDecoder(new string[] { "" });
+            var reader = new CSVDecoder(new String[] { "" });
             Assert.AreEqual("", reader.ReadString());
         }
     }

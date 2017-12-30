@@ -7,9 +7,9 @@ using InvertedTomato.Buffers;
 namespace InvertedTomato.Feather.Tests {
     [TestClass]
     public class ClassicDecoderTests {
-        public static Buffer<byte> StringToBuffer(string hex) {
+        public static Buffer<Byte> StringToBuffer(String hex) {
             hex = hex.Replace("-", "");
-            return new Buffer<byte>(Enumerable.Range(0, hex.Length)
+            return new Buffer<Byte>(Enumerable.Range(0, hex.Length)
                              .Where(x => x % 2 == 0)
                              .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
                              .ToArray());
@@ -23,7 +23,7 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void ReadNullableUInt8_1() {
             var encoder = new ClassicDecoder(StringToBuffer("02-00-01-01"));
-            Assert.AreEqual((byte)1, encoder.ReadNullableUInt8());
+            Assert.AreEqual((Byte)1, encoder.ReadNullableUInt8());
         }
         [TestMethod]
         public void ReadNullableUInt8_Null() {
@@ -44,7 +44,7 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void ReadNullableSInt8_1() {
             var encoder = new ClassicDecoder(StringToBuffer("02-00-01-01"));
-            Assert.AreEqual((sbyte)1, encoder.ReadNullableSInt8());
+            Assert.AreEqual((SByte)1, encoder.ReadNullableSInt8());
         }
         [TestMethod]
         public void ReadNullableSInt8_Null() {
@@ -60,7 +60,7 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void ReadNullableUInt16_1() {
             var encoder = new ClassicDecoder(StringToBuffer("03-00-01-01-00"));
-            Assert.AreEqual((ushort)1, encoder.ReadNullableUInt16());
+            Assert.AreEqual((UInt16)1, encoder.ReadNullableUInt16());
         }
         [TestMethod]
         public void ReadNullableUInt16_Null() {
@@ -81,7 +81,7 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void ReadNullableSInt16_1() {
             var encoder = new ClassicDecoder(StringToBuffer("03-00-01-01-00"));
-            Assert.AreEqual((short)1, encoder.ReadNullableSInt16());
+            Assert.AreEqual((Int16)1, encoder.ReadNullableSInt16());
         }
         [TestMethod]
         public void ReadNullableSInt16_Null() {
@@ -92,12 +92,12 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void ReadUInt32_1() {
             var encoder = new ClassicDecoder(StringToBuffer("04-00-01-00-00-00"));
-            Assert.AreEqual((uint)1, encoder.ReadUInt32());
+            Assert.AreEqual((UInt32)1, encoder.ReadUInt32());
         }
         [TestMethod]
         public void ReadNullableUInt32_1() {
             var encoder = new ClassicDecoder(StringToBuffer("05-00-01-01-00-00-00"));
-            Assert.AreEqual((uint)1, encoder.ReadNullableUInt32());
+            Assert.AreEqual((UInt32)1, encoder.ReadNullableUInt32());
         }
         [TestMethod]
         public void ReadNullableUInt32_Null() {
@@ -129,12 +129,12 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void ReadUInt64_1() {
             var encoder = new ClassicDecoder(StringToBuffer("08-00-01-00-00-00-00-00-00-00"));
-            Assert.AreEqual((ulong)1, encoder.ReadUInt64());
+            Assert.AreEqual((UInt64)1, encoder.ReadUInt64());
         }
         [TestMethod]
         public void ReadNullableUInt64_1() {
             var encoder = new ClassicDecoder(StringToBuffer("09-00-01-01-00-00-00-00-00-00-00"));
-            Assert.AreEqual((ulong)1, encoder.ReadNullableUInt64());
+            Assert.AreEqual((UInt64)1, encoder.ReadNullableUInt64());
         }
         [TestMethod]
         public void ReadNullableUInt64_Null() {
@@ -209,13 +209,13 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void ReadGuid_Random() {
             var value = Guid.NewGuid();
-            var encoder = new ClassicDecoder(new Buffer<byte>(new byte[] { 16, 0 }.Concat(value.ToByteArray()).ToArray()));
+            var encoder = new ClassicDecoder(new Buffer<Byte>(new Byte[] { 16, 0 }.Concat(value.ToByteArray()).ToArray()));
             Assert.AreEqual(value, encoder.ReadGuid());
         }
         [TestMethod]
         public void ReadNullableGuid_Random() {
             var value = Guid.NewGuid();
-            var encoder = new ClassicDecoder(new Buffer<byte>(new byte[] { 17, 0, 1 }.Concat(value.ToByteArray()).ToArray()));
+            var encoder = new ClassicDecoder(new Buffer<Byte>(new Byte[] { 17, 0, 1 }.Concat(value.ToByteArray()).ToArray()));
             Assert.AreEqual(value, encoder.ReadNullableGuid());
         }
         [TestMethod]

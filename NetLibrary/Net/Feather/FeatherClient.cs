@@ -10,7 +10,8 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 
 namespace InvertedTomato.Net.Feather {
-    public sealed class Remote: IDisposable {
+    public sealed class FeatherClient<TMessage>: IDisposable
+        where TMessage : IMessage, new() {
 
         /// <summary>
         /// The remote endpoint.
@@ -28,17 +29,17 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// The total amount of data transmitted (excluding headers).
         /// </summary>
-        public long TotalTxBytes { get; private set; }
+        public Int64 TotalTxBytes { get; private set; }
 
         /// <summary>
         /// The total amount of data received (excluding headers).
         /// </summary>
-        public long TotalRxBytes { get; private set; }
+        public Int64 TotalRxBytes { get; private set; }
 
         /// <summary>
         /// If the connection has been disposed (disconnected).
         /// </summary>
-        public bool IsDisposed { get; private set; }
+        public Boolean IsDisposed { get; private set; }
 
         /// <summary>
         /// When the remote disconnects.
@@ -48,12 +49,12 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// When a message arrives from this remote.
         /// </summary>
-        public Action<MessageDecoder> OnMessage;
+        public event Action<TMessage> OnMessage;
 
         /// <summary>
         /// Configuration options
         /// </summary>
-        private ConnectionOptions Options;
+        private Options Options;
 
         /// <summary>
         /// Timer to send keep-alive payloads to prevent disconnection.
@@ -73,18 +74,54 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Receive buffers.
         /// </summary>
-        private Buffer<byte> HeaderBuffer;
+        private Buffer<Byte> HeaderBuffer;
 
         /// <summary>
         /// Number of payloads that haven't made it to the TCP buffer yet. Will be used for back-pressure indication.
         /// </summary>
-        private int OutstandingSends = 0;
+        private Int32 OutstandingSends = 0;
 
-        private Buffer<byte> PayloadBuffer = null;
+        private Buffer<Byte> PayloadBuffer = null;
 
         private MessageDecoder NextMessage;
 
-        public void Start(bool isServerConnection, ISocket clientSocket, ConnectionOptions options, Action<DisconnectionType> onDisconnection, Action<MessageDecoder> onMessage) {
+
+        /// <summary>
+        /// Connect to a Feather server.
+        /// </summary>
+        /// <returns>Server connection</returns>
+        public FeatherClient Connect(String serverName, Int32 port) { return Connect(new DnsEndPoint(serverName, port)); }
+
+        /// <summary>
+        /// Connect to a Feather server.
+        /// </summary>
+        /// <returns>Server connection</returns>
+        public FeatherClient Connect(EndPoint endPoint) {
+#if DEBUG
+            if(null == endPoint) {
+                throw new ArgumentNullException("endPoint");
+            }
+#endif
+
+            // Open socket
+            var clientSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            clientSocket.Connect(endPoint);
+
+            // Create remote
+            var remote = Remotes[endPoint] = new FeatherClient();
+            remote.Start(false, new SocketReal(clientSocket), Options,
+                (reason) => {
+                    OnClientDisconnection(remote, reason);
+                    Remotes.TryRemove(endPoint);
+                },
+                (message) => { OnMessageReceived(remote, message); }
+            );
+
+            return remote;
+        }
+
+
+        public void Start(Boolean isServerConnection, ISocket clientSocket, Options options, Action<DisconnectionType> onDisconnection, Action<MessageDecoder> onMessage) {
 #if DEBUG
             if (null == options) {
                 throw new ArgumentNullException("options");
@@ -121,7 +158,7 @@ namespace InvertedTomato.Net.Feather {
             // Setup keep alive
             if (options.UseApplicationLayerKeepAlive) {
                 // Start keep-alive timer (must be before receive start)
-                KeepAliveTimer = new Timer(KeepAliveTimer_OnElapsed, null, (int)options.KeepAliveInterval.TotalMilliseconds, (int)options.KeepAliveInterval.TotalMilliseconds);
+                KeepAliveTimer = new Timer(KeepAliveTimer_OnElapsed, null, (Int32)options.KeepAliveInterval.TotalMilliseconds, (Int32)options.KeepAliveInterval.TotalMilliseconds);
                 
             } else {
                 // Enable TCP keep-alive
@@ -130,7 +167,7 @@ namespace InvertedTomato.Net.Feather {
 
             // Setup receive
             NextMessage = new MessageDecoder();
-            HeaderBuffer = new Buffer<byte>(NextMessage.MaxHeaderLength);
+            HeaderBuffer = new Buffer<Byte>(NextMessage.MaxHeaderLength);
 
             // Seed receiving
             ReceiveHeaderChunk();
@@ -195,7 +232,7 @@ namespace InvertedTomato.Net.Feather {
 
             // Merge into master buffer
             var masterLength = payloadBuffers.Sum(a => a.Used);
-            var masterBuffer = new Buffer<byte>(masterLength);
+            var masterBuffer = new Buffer<Byte>(masterLength);
             foreach(var payloadBuffer in payloadBuffers) {
                 masterBuffer.EnqueueBuffer(payloadBuffer);
             }
@@ -204,7 +241,7 @@ namespace InvertedTomato.Net.Feather {
             RawSend(masterBuffer, done);
         }
 
-        private void RawSend(ReadOnlyBuffer<byte> buffer, Action done) {
+        private void RawSend(ReadOnlyBuffer<Byte> buffer, Action done) {
             // Increment outstanding counter
             Interlocked.Increment(ref OutstandingSends);
 
@@ -238,7 +275,7 @@ namespace InvertedTomato.Net.Feather {
 
             // Restart keep-alive timer
             if (Options.UseApplicationLayerKeepAlive) {
-                KeepAliveTimer.Change((int)Options.KeepAliveInterval.TotalMilliseconds, (int)Options.KeepAliveInterval.TotalMilliseconds);
+                KeepAliveTimer.Change((Int32)Options.KeepAliveInterval.TotalMilliseconds, (Int32)Options.KeepAliveInterval.TotalMilliseconds);
             }
         }
 
@@ -265,7 +302,7 @@ namespace InvertedTomato.Net.Feather {
 
         private void OnHeaderChunkReceived(IAsyncResult ar) {
             // Complete receive and get read length
-            int rxBytes = 0;
+            Int32 rxBytes = 0;
             try {
                 rxBytes = ClientStream.EndRead(ar);
             } catch (ObjectDisposedException) {
@@ -348,7 +385,7 @@ namespace InvertedTomato.Net.Feather {
 
         private void OnPayloadChunkReceived(IAsyncResult ar) {
             // Complete receive and get read length
-            int rxBytes = 0;
+            Int32 rxBytes = 0;
             try {
                 rxBytes = ClientStream.EndRead(ar);
             } catch (ObjectDisposedException) {
@@ -374,7 +411,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Fires when a payload hasn't been sent in the keep-alive interval in order to prevent a receive-timeout on the remote end.
         /// </summary>
-        private void KeepAliveTimer_OnElapsed(object state) {
+        private void KeepAliveTimer_OnElapsed(Object state) {
             // Send blank payload - it will reset the timeout on the remote end, however not be delivered as an actual payload
             RawSend(NextMessage.GetNullPayload(), null);
         }
@@ -396,7 +433,7 @@ namespace InvertedTomato.Net.Feather {
         /// Dispose.
         /// </summary>
         /// <param name="disposing"></param>
-        private void Dispose(bool disposing) {
+        private void Dispose(Boolean disposing) {
             if (IsDisposed) {
                 return;
             }
@@ -432,7 +469,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Validate certificates given by servers, on the client end.
         /// </summary>
-        private static bool ValidateServerCertificate(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors policyErrors) {
+        private static Boolean ValidateServerCertificate(Object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors policyErrors) {
             // If there are no errors, return success
             if (policyErrors == SslPolicyErrors.None) {
                 return true;

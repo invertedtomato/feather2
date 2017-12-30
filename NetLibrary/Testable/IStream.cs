@@ -7,33 +7,33 @@ using System.Threading.Tasks;
 
 namespace InvertedTomato.Testable {
     public interface IStream {
-        long Position { get; set; }
-        long Length { get; }
-        bool CanWrite { get; }
-        bool CanTimeout { get; }
-        bool CanSeek { get; }
-        bool CanRead { get; }
-        int ReadTimeout { get; set; }
-        int WriteTimeout { get; set; }
+        Int64 Position { get; set; }
+        Int64 Length { get; }
+        Boolean CanWrite { get; }
+        Boolean CanTimeout { get; }
+        Boolean CanSeek { get; }
+        Boolean CanRead { get; }
+        Int32 ReadTimeout { get; set; }
+        Int32 WriteTimeout { get; set; }
 
         void CopyTo(Stream destination);
-        void CopyTo(Stream destination, int bufferSize);
+        void CopyTo(Stream destination, Int32 bufferSize);
         Task CopyToAsync(Stream destination);
-        Task CopyToAsync(Stream destination, int bufferSize);
-        Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken);
+        Task CopyToAsync(Stream destination, Int32 bufferSize);
+        Task CopyToAsync(Stream destination, Int32 bufferSize, CancellationToken cancellationToken);
         void Dispose();
         void Flush();
         Task FlushAsync();
         Task FlushAsync(CancellationToken cancellationToken);
-        int Read(byte[] buffer, int offset, int count);
-        Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken);
-        Task<int> ReadAsync(byte[] buffer, int offset, int count);
-        int ReadByte();
-        long Seek(long offset, SeekOrigin origin);
-        void SetLength(long value);
-        void Write(byte[] buffer, int offset, int count);
-        Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken);
-        Task WriteAsync(byte[] buffer, int offset, int count);
-        void WriteByte(byte value);
+        Int32 Read(Byte[] buffer, Int32 offset, Int32 count);
+        Task<Int32> ReadAsync(Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken);
+        Task<Int32> ReadAsync(Byte[] buffer, Int32 offset, Int32 count);
+        Int32 ReadByte();
+        Int64 Seek(Int64 offset, SeekOrigin origin);
+        void SetLength(Int64 value);
+        void Write(Byte[] buffer, Int32 offset, Int32 count);
+        Task WriteAsync(Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken);
+        Task WriteAsync(Byte[] buffer, Int32 offset, Int32 count);
+        void WriteByte(Byte value);
     }
 }

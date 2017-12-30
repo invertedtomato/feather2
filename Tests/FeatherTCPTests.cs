@@ -10,7 +10,7 @@ namespace InvertedTomato.Feather.Tests {
     public class FeatherTCPTests {
         [TestMethod]
         public void EndToEnd() {
-            var message = new TrivialEncoder(new byte[] { 0x01 });
+            var message = new TrivialEncoder(new Byte[] { 0x01 });
             var options = new ConnectionOptions() { NoDelay = true };
 
             var onConnects = 0;

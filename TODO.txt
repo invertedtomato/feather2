@@ -1,2 +1,30 @@
 Use VLQ for framing header (don't try and use the codec - it's seemingly impossible to know the header length from this perspective)
 Wire up IIntegerCodec for compression.
+
+
+class FeatherServer<T> where T: IMessage{
+	event Action<EndPoint, FeatherClient> OnClientConnection;
+	event Action<EndPoint, DisconnectionType> OnClientDisconnection;
+	event Action<EndPoint, FeatherClient, T> OnMessageReceived;    Needed??
+
+	FeatherServer(UInt16 port);
+	FeatherServer(EndPoint endpoint, Options options);
+	
+	void SendAll(T);
+}
+
+class FeatherClient<T> where T : IMessage{
+	event Action<T> OnMessageReceived;
+
+	void SendTmsg);
+}
+
+class FeatherReader<T>  where T : IMessage{
+	static OpenFile(string fileName)
+	T Read();
+}
+
+class FeatherWriter<T> where T : IMessage{
+	static OpenFile(string fileName
+	void Write(T msg);
+}

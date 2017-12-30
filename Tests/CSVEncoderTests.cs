@@ -7,42 +7,42 @@ using InvertedTomato.IO.Feather.CSVCodec;
 namespace InvertedTomato.Feather.Tests {
     [TestClass]
     public class CSVEncoderTests {
-        public string EncodeSymbolSet(string[] symbolSet) {
-            var buffer = CSVEncoder.Encode(new List<string>(symbolSet));
+        public String EncodeSymbolSet(String[] symbolSet) {
+            var buffer = CSVEncoder.Encode(new List<String>(symbolSet));
             return Encoding.UTF8.GetString(buffer.ToArray());
         }
 
         [TestMethod]
         public void Encode_1() {
-            Assert.AreEqual("1\n", EncodeSymbolSet(new string[] { "1" }));
+            Assert.AreEqual("1\n", EncodeSymbolSet(new String[] { "1" }));
         }
         [TestMethod]
         public void Encode_a() {
-            Assert.AreEqual("a\n", EncodeSymbolSet(new string[] { "a" }));
+            Assert.AreEqual("a\n", EncodeSymbolSet(new String[] { "a" }));
         }
         [TestMethod]
         public void Encode_Blank() {
-            Assert.AreEqual("\n", EncodeSymbolSet(new string[] { }));
+            Assert.AreEqual("\n", EncodeSymbolSet(new String[] { }));
         }
         [TestMethod]
         public void Encode_Comma() {
-            Assert.AreEqual("\",\"\n", EncodeSymbolSet(new string[] { "," }));
+            Assert.AreEqual("\",\"\n", EncodeSymbolSet(new String[] { "," }));
         }
         [TestMethod]
         public void Encode_Quote() {
-            Assert.AreEqual("\"\\\"\"\n", EncodeSymbolSet(new string[] { "\"" }));
+            Assert.AreEqual("\"\\\"\"\n", EncodeSymbolSet(new String[] { "\"" }));
         }
         [TestMethod]
         public void Encode_Unicode() {
-            Assert.AreEqual("\x10A7\n", EncodeSymbolSet(new string[] { "\x10A7" }));
+            Assert.AreEqual("\x10A7\n", EncodeSymbolSet(new String[] { "\x10A7" }));
         }
         [TestMethod]
         public void Encode_a_b_c() {
-            Assert.AreEqual("a,b,c\n", EncodeSymbolSet(new string[] { "a", "b", "c" }));
+            Assert.AreEqual("a,b,c\n", EncodeSymbolSet(new String[] { "a", "b", "c" }));
         }
         [TestMethod]
         public void Encode_Complex() {
-            Assert.AreEqual("1,\"Don't talk to \\\"Jill\\\"\\\\\\\"Tom\\\"!.\",\x10A7,\n", EncodeSymbolSet(new string[] { "1", "Don't talk to \"Jill\"\\\"Tom\"!.", "\x10A7", "" }));
+            Assert.AreEqual("1,\"Don't talk to \\\"Jill\\\"\\\\\\\"Tom\\\"!.\",\x10A7,\n", EncodeSymbolSet(new String[] { "1", "Don't talk to \"Jill\"\\\"Tom\"!.", "\x10A7", "" }));
         }
 
 
@@ -72,7 +72,7 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void WriteDecimal_10Point1() {
             var writer = new CSVEncoder();
-            writer.WriteDecimal((decimal)10.1);
+            writer.WriteDecimal((Decimal)10.1);
             Assert.AreEqual(1, writer.Symbols.Count);
             Assert.AreEqual("10.1", writer.Symbols[0]);
         }

@@ -21,10 +21,10 @@ namespace Benchmark {
             using (var input = File.OpenRead("test-data.mtd")) {
 
                 // BASELINE
-                using (var reader = new FeatherReader(input)) {
+                using (var reader = new FeatherReader<GenericMessage>.OpenFile(input)) {
                     // Iterate through all records
                     stopwatch = Stopwatch.StartNew();
-                    while ((readerPayload = reader.Read<ClassicDecoder>()) != null) {
+                    while ((readerPayload = reader.Read()) != null) {
                         switch (readerPayload.ReadUInt8()) {
                             case AssociationRecord.OpCode: // Association
                                 var association = AssociationRecord.FromClassic(readerPayload);
@@ -40,7 +40,7 @@ namespace Benchmark {
                     // CLASSIC
 
                     using (var output = new MemoryStream()) {
-                        using (var writer = new FeatherWriter(output)) {
+                        using (var writer = new FeatherWriter<GenericMessage>(output)) {
 
                             // Iterate through all records
                             stopwatch = Stopwatch.StartNew();

@@ -4,86 +4,44 @@ using InvertedTomato.IO.Buffers;
 using InvertedTomato.Compression.Integers;
 
 namespace InvertedTomato.IO.Feather {
-    public class FeatherWriter<TCodec> : IDisposable where TCodec : IIntegerCodec, new() {
+    public class FeatherWriter<TMessage> : IDisposable where TMessage : IMessage, new() {
         /// <summary>
         /// If the file has been disposed.
         /// </summary>
-        public bool IsDisposed { get; private set; }
-
-        private readonly Options Options;
+        public Boolean IsDisposed { get; private set; }
+        
         private readonly Stream Output;
+        private readonly Boolean OwnsOutput;
 
+        public FeatherWriter(Stream output) : this(output, false) { }
 
-        public FeatherWriter(Stream output) : this(output, new Options()) { }
-
-        public FeatherWriter(Stream output, Options options) {
+        public FeatherWriter(Stream output, Boolean ownsOutput) {
 #if DEBUG
             if (null == output) {
                 throw new ArgumentNullException("output");
-            }
-            if (null == options) {
-                throw new ArgumentNullException("options");
             }
 #endif
 
             // Store
             Output = output;
-            Options = options;
+            OwnsOutput = ownsOutput;
         }
 
-        public void Write(MessageEncoder<TCodec> payload) {
+        public void Write(TMessage message) {
 #if DEBUG
-            if (null == payload) {
-                throw new ArgumentNullException("payload");
+            if (null == message) {
+                throw new ArgumentNullException(nameof(message);
             }
-            if (IsDisposed) {
+#endif
+            if(IsDisposed) {
                 throw new ObjectDisposedException("this");
             }
-#endif
 
-            Write(new MessageEncoder<TCodec>[] { payload });
+            throw new NotImplementedException();
         }
+        
 
-        public void Write(MessageEncoder<TCodec>[] payloads) {
-#if DEBUG
-            if (null == payloads) {
-                throw new ArgumentNullException("payloads");
-            }
-            if (IsDisposed) {
-                throw new ObjectDisposedException("this");
-            }
-#endif
-
-            // For each payload...
-            foreach (var payload in payloads) {
-#if DEBUG
-                if (null == payload) {
-                    throw new ArgumentNullException("payloads", "Element in array.");
-                }
-#endif
-
-                // Get payload
-                var payloadBuffer = payload.GetPayload();
-
-                // Compress frame header
-                var input = new Buffer<ulong>(payloadBuffer.Used);
-                var frameBuffer = new Buffer<byte>(2);
-                var codec = new TCodec();
-                while (!codec.Compress(input, frameBuffer)) {
-                    frameBuffer = frameBuffer.Resize(frameBuffer.MaxCapacity * 2);
-                }
-                
-                lock (Output) {
-                    // Write frame header
-                    Output.Write(frameBuffer);
-
-                    // Write payload
-                    Output.Write(payloadBuffer);
-                }
-            }
-        }
-
-        protected virtual void Dispose(bool disposing) {
+        protected virtual void Dispose(Boolean disposing) {
             if (IsDisposed) {
                 return;
             }
@@ -91,6 +49,9 @@ namespace InvertedTomato.IO.Feather {
 
             if (disposing) {
                 // Dispose managed state (managed objects)
+                if(OwnsOutput) {
+                    Output?.Dispose();
+                }
             }
 
             // Set large fields to null

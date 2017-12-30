@@ -260,7 +260,7 @@ namespace InvertedTomato.Feather.Tests {
 
             var encoder = new ClassicEncoder();
             encoder.WriteGuid(value);
-            Assert.AreEqual(BitConverter.ToString(new byte[] { 16, 0 }.Concat(value.ToByteArray()).ToArray()), encoder.GetBuffer().ToString());
+            Assert.AreEqual(BitConverter.ToString(new Byte[] { 16, 0 }.Concat(value.ToByteArray()).ToArray()), encoder.GetBuffer().ToString());
         }
         [TestMethod]
         public void WriteNullableGuid_Random() {
@@ -268,7 +268,7 @@ namespace InvertedTomato.Feather.Tests {
 
             var encoder = new ClassicEncoder();
             encoder.WriteNullableGuid(value);
-            Assert.AreEqual(BitConverter.ToString(new byte[] { 17, 0, 1 }.Concat(value.ToByteArray()).ToArray()), encoder.GetBuffer().ToString());
+            Assert.AreEqual(BitConverter.ToString(new Byte[] { 17, 0, 1 }.Concat(value.ToByteArray()).ToArray()), encoder.GetBuffer().ToString());
         }
         [TestMethod]
         public void WriteNullableGuid_Null() {
@@ -394,7 +394,7 @@ namespace InvertedTomato.Feather.Tests {
         [TestMethod]
         public void Write_Raw() {
             var encoder = new ClassicEncoder();
-            encoder.Write(new byte[] { 1, 2, 3 });
+            encoder.Write(new Byte[] { 1, 2, 3 });
             Assert.AreEqual("03-00-01-02-03", encoder.GetBuffer().ToString());
         }
 
@@ -419,12 +419,12 @@ namespace InvertedTomato.Feather.Tests {
 
                 using (var reader = new FeatherReader(stream)) {
                     var payload2 = reader.Read<ClassicDecoder>();
-                    Assert.AreEqual((uint)1, payload2.ReadUInt32());
+                    Assert.AreEqual((UInt32)1, payload2.ReadUInt32());
                     Assert.AreEqual(true, payload2.ReadBoolean());
                     Assert.AreEqual("test", payload2.ReadString());
 
                     payload2 = reader.Read<ClassicDecoder>();
-                    Assert.AreEqual((uint)2, payload2.ReadUInt32());
+                    Assert.AreEqual((UInt32)2, payload2.ReadUInt32());
                     Assert.AreEqual(false, payload2.ReadBoolean());
                     Assert.AreEqual(null, payload2.ReadNullableString());
 

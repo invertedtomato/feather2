@@ -8,7 +8,7 @@ namespace InvertedTomato.Tests {
     public class BufferTests {
         [TestMethod]
         public void Init_MaxCapacity() {
-            var buffer = new Buffer<byte>(2);
+            var buffer = new Buffer<Byte>(2);
 
             Assert.AreEqual(0, buffer.Start);
             Assert.AreEqual(0, buffer.End);
@@ -21,7 +21,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Init_Array() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
 
             Assert.AreEqual(0, buffer.Start);
             Assert.AreEqual(2, buffer.End);
@@ -29,7 +29,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Init_ArraySubset() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 1);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 }, 1);
 
             Assert.AreEqual(0, buffer.Start);
             Assert.AreEqual(1, buffer.End);
@@ -38,7 +38,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Init_ArraySuperset() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 4);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 }, 4);
 
             Assert.AreEqual(0, buffer.Start);
             Assert.AreEqual(2, buffer.End);
@@ -47,7 +47,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Enqueue() {
-            var buffer = new Buffer<byte>(2);
+            var buffer = new Buffer<Byte>(2);
 
             // First enqueue
             buffer.Enqueue(1);
@@ -88,7 +88,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void EnqueueBuffer() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 10);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 }, 10);
 
             buffer.EnqueueBuffer(buffer);
             Assert.AreEqual(4, buffer.Used);
@@ -102,7 +102,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void EnqueueBuffer_ExactSpace() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 4);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 }, 4);
 
             buffer.EnqueueBuffer(buffer);
             Assert.AreEqual(4, buffer.Used);
@@ -115,9 +115,9 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Enqueue_Array() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 10);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 }, 10);
 
-            buffer.EnqueueArray(new byte[] { 1, 2 });
+            buffer.EnqueueArray(new Byte[] { 1, 2 });
 
 
             Assert.AreEqual(4, buffer.Used);
@@ -134,7 +134,7 @@ namespace InvertedTomato.Tests {
         [TestMethod]
         [ExpectedException(typeof(BufferOverflowException))]
         public void Enqueue_Overflow() {
-            var buffer = new Buffer<byte>(2);
+            var buffer = new Buffer<Byte>(2);
             buffer.Enqueue(1);
             buffer.Enqueue(2);
             buffer.Enqueue(3);
@@ -142,7 +142,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Dequeue() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
 
             Assert.AreEqual(1, buffer.Dequeue());
             Assert.AreEqual(1, buffer.Start);
@@ -155,7 +155,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void DequeueBuffer() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
 
             var extracted = buffer.DequeueBuffer(1);
             Assert.AreEqual(1, extracted.Used);
@@ -171,7 +171,7 @@ namespace InvertedTomato.Tests {
         [TestMethod]
         [ExpectedException(typeof(BufferOverflowException))]
         public void Dequeue_Overflow() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
 
             Assert.AreEqual(1, buffer.Dequeue());
             Assert.AreEqual(2, buffer.Dequeue());
@@ -180,9 +180,9 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void TryDequeue() {
-            byte output;
+            Byte output;
 
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
 
             Assert.AreEqual(true, buffer.TryDequeue(out output));
             Assert.AreEqual(1, output);
@@ -207,7 +207,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Peek() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
 
             Assert.AreEqual(1, buffer.Peek());
             Assert.AreEqual(0, buffer.Start);
@@ -221,16 +221,16 @@ namespace InvertedTomato.Tests {
         [TestMethod]
         [ExpectedException(typeof(BufferOverflowException))]
         public void Peek_Overflow() {
-            var buffer = new Buffer<byte>(0);
+            var buffer = new Buffer<Byte>(0);
 
             buffer.Peek();
         }
 
         [TestMethod]
         public void TryPeek() {
-            byte value;
+            Byte value;
 
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
 
             Assert.AreEqual(true, buffer.TryPeek(out value));
             Assert.AreEqual(1, value);
@@ -245,16 +245,16 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void TryPeek_Overflow() {
-            byte value;
+            Byte value;
 
-            var buffer = new Buffer<byte>(0);
+            var buffer = new Buffer<Byte>(0);
 
             Assert.AreEqual(false, buffer.TryPeek(out value));
         }
         
         [TestMethod]
         public void Peek_Absolute() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
 
             Assert.AreEqual(1, buffer.Peek(0));
             Assert.AreEqual(0, buffer.Start);
@@ -268,13 +268,13 @@ namespace InvertedTomato.Tests {
         [TestMethod]
         [ExpectedException(typeof(BufferOverflowException))]
         public void Peek_Absolute_Overflow() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
             buffer.Peek(3);
         }
 
         [TestMethod]
         public void PeekBuffer() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2, 3 }, 1, 2);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2, 3 }, 1, 2);
             var peeked = buffer.PeekBuffer(2).ToArray();
             Assert.AreEqual(2, peeked.Length);
             Assert.AreEqual(2, peeked[0]);
@@ -284,13 +284,13 @@ namespace InvertedTomato.Tests {
         [TestMethod]
         [ExpectedException(typeof(BufferOverflowException))]
         public void PeekBuffer_Overflow() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2, 3 }, 1, 2);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2, 3 }, 1, 2);
             buffer.PeekBuffer(3);
         }
 
         [TestMethod]
         public void Resize_Start() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
             var buffer2 = buffer.Resize(8);
             Assert.AreEqual(buffer.Start, buffer2.Start);
             Assert.AreEqual(buffer.End, buffer2.End);
@@ -299,7 +299,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Resize_StartPlusOne() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
             buffer.Dequeue();
 
             var buffer2 = buffer.Resize(8);
@@ -310,22 +310,22 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Resize_AlmostOverflow() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
             buffer.Resize(2);
         }
 
         [TestMethod]
         [ExpectedException(typeof(BufferOverflowException))]
         public void Resize_Overflow() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
             buffer.Resize(1);
         }
 
         [TestMethod]
         public void Enumerate() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 });
 
-            var enumerator = ((IEnumerable<byte>)buffer).GetEnumerator();
+            var enumerator = ((IEnumerable<Byte>)buffer).GetEnumerator();
             Assert.AreEqual(true, enumerator.MoveNext());
             Assert.AreEqual(1, enumerator.Current);
             Assert.AreEqual(true, enumerator.MoveNext());
@@ -335,7 +335,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void IncremenentEnd() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 4);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 }, 4);
             buffer.IncrementEnd(2);
             Assert.AreEqual(4, buffer.End);
         }
@@ -343,13 +343,13 @@ namespace InvertedTomato.Tests {
         [TestMethod]
         [ExpectedException(typeof(BufferOverflowException))]
         public void IncremenentEnd_Overflow() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2 }, 4);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2 }, 4);
             buffer.IncrementEnd(3);
         }
 
         [TestMethod]
         public void ToArray() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2, 3 });
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2, 3 });
             buffer.Dequeue();
 
             var result = buffer.ToArray();
@@ -360,7 +360,7 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void Reset() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2, 3 }, 4);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2, 3 }, 4);
             buffer.Dequeue();
             buffer.Reset();
 
@@ -370,20 +370,20 @@ namespace InvertedTomato.Tests {
 
         [TestMethod]
         public void ToString_ByteArray() {
-            var buffer = new Buffer<byte>(new byte[] { 1, 2, 3 }, 1, 2);
+            var buffer = new Buffer<Byte>(new Byte[] { 1, 2, 3 }, 1, 2);
             Assert.AreEqual("02-03", buffer.ToString());
         }
 
 
         [TestMethod]
         public void ToString_IntArray() {
-            var buffer = new Buffer<int>(new int[] { 1, 2, 3 }, 1, 2);
+            var buffer = new Buffer<Int32>(new Int32[] { 1, 2, 3 }, 1, 2);
             Assert.AreEqual("2-3", buffer.ToString());
         }
 
         [TestMethod]
         public void Replace() {
-            var buffer = new Buffer<int>(new int[] { 1, 2, 3 }, 1, 2);
+            var buffer = new Buffer<Int32>(new Int32[] { 1, 2, 3 }, 1, 2);
             buffer.Replace(1, 5);
 
             var result = buffer.ToArray();
@@ -395,14 +395,14 @@ namespace InvertedTomato.Tests {
         [TestMethod]
         [ExpectedException(typeof(IndexOutOfRangeException))]
         public void Replace_IndexTooLow() {
-            var buffer = new Buffer<int>(new int[] { 1, 2, 3 }, 1, 2);
+            var buffer = new Buffer<Int32>(new Int32[] { 1, 2, 3 }, 1, 2);
             buffer.Replace(0, 5);
         }
 
         [TestMethod]
         [ExpectedException(typeof(IndexOutOfRangeException))]
         public void Replace_IndexTooHigh() {
-            var buffer = new Buffer<int>(new int[] { 1, 2, 3 }, 1, 2);
+            var buffer = new Buffer<Int32>(new Int32[] { 1, 2, 3 }, 1, 2);
             buffer.Replace(3, 5);
         }
     }

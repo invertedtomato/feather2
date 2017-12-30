@@ -1,7 +1,7 @@
 ﻿using System.ComponentModel;
 
 namespace InvertedTomato.Net.Feather {
-    public enum DisconnectionType : byte {
+    public enum DisconnectionType : System.Byte {
         //[Description("The local side closed the connection.")]
         LocalDisconnection = 1,
 

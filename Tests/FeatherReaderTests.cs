@@ -108,13 +108,13 @@ namespace InvertedTomato.Feather.Tests {
 
 
     public class FakeDecoder : IDecoder {
-        public int MinHeaderLength { get { return 1; } }
-        public int MaxHeaderLength { get { return 1; } }
+        public Int32 MinHeaderLength { get { return 1; } }
+        public Int32 MaxHeaderLength { get { return 1; } }
 
-        public int GetPayloadLength(ReadOnlyBuffer<byte> buffer) { return 0; }
+        public Int32 GetPayloadLength(ReadOnlyBuffer<Byte> buffer) { return 0; }
 
-        public void LoadBuffer(Buffer<byte> buffer) { throw new NotImplementedException(); }
+        public void LoadBuffer(Buffer<Byte> buffer) { throw new NotImplementedException(); }
 
-        public ReadOnlyBuffer<byte> GetNullPayload() { throw new NotImplementedException(); }
+        public ReadOnlyBuffer<Byte> GetNullPayload() { throw new NotImplementedException(); }
     }
 }

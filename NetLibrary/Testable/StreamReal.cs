@@ -14,30 +14,30 @@ namespace InvertedTomato.Testable
             Underlying = underlying ?? throw new ArgumentNullException("underlying");
         }
 
-        public long Position {get { return Underlying.Position;} set { Underlying.Position = value;}}
+        public Int64 Position {get { return Underlying.Position;} set { Underlying.Position = value;}}
 
-        public long Length {get { return Underlying.Length;}} 
+        public Int64 Length {get { return Underlying.Length;}} 
 
-        public bool CanWrite {get { return Underlying.CanWrite;}} 
+        public Boolean CanWrite {get { return Underlying.CanWrite;}} 
 
-        public bool CanTimeout {get { return Underlying.CanTimeout;}} 
+        public Boolean CanTimeout {get { return Underlying.CanTimeout;}} 
 
-        public bool CanSeek {get { return Underlying.CanSeek;}} 
+        public Boolean CanSeek {get { return Underlying.CanSeek;}} 
 
-        public bool CanRead {get { return Underlying.CanRead;}} 
+        public Boolean CanRead {get { return Underlying.CanRead;}} 
 
-        public int ReadTimeout {get { return Underlying.ReadTimeout;} set { Underlying.ReadTimeout = value;}}
-        public int WriteTimeout {get { return Underlying.WriteTimeout;} set { Underlying.WriteTimeout = value;}}
+        public Int32 ReadTimeout {get { return Underlying.ReadTimeout;} set { Underlying.ReadTimeout = value;}}
+        public Int32 WriteTimeout {get { return Underlying.WriteTimeout;} set { Underlying.WriteTimeout = value;}}
 
         public void CopyTo(Stream destination) {            Underlying.CopyTo(destination);        }
 
-        public void CopyTo(Stream destination, int bufferSize) { Underlying.CopyToAsync(destination, bufferSize);        }
+        public void CopyTo(Stream destination, Int32 bufferSize) { Underlying.CopyToAsync(destination, bufferSize);        }
 
         public Task CopyToAsync(Stream destination) {return  Underlying.CopyToAsync(destination); }
 
-        public Task CopyToAsync(Stream destination, int bufferSize) { return Underlying.CopyToAsync(destination, bufferSize); }
+        public Task CopyToAsync(Stream destination, Int32 bufferSize) { return Underlying.CopyToAsync(destination, bufferSize); }
 
-        public Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken) { return Underlying.CopyToAsync(destination, bufferSize, cancellationToken); }
+        public Task CopyToAsync(Stream destination, Int32 bufferSize, CancellationToken cancellationToken) { return Underlying.CopyToAsync(destination, bufferSize, cancellationToken); }
 
         public void Dispose() {  Underlying.Dispose(); }
 
@@ -47,24 +47,24 @@ namespace InvertedTomato.Testable
 
         public Task FlushAsync(CancellationToken cancellationToken) { return Underlying.FlushAsync(cancellationToken); }
 
-        public int Read(byte[] buffer, int offset, int count) { return Underlying.Read(buffer, offset, count); }
+        public Int32 Read(Byte[] buffer, Int32 offset, Int32 count) { return Underlying.Read(buffer, offset, count); }
 
-        public Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) { return Underlying.ReadAsync(buffer, offset, count, cancellationToken); }
+        public Task<Int32> ReadAsync(Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken) { return Underlying.ReadAsync(buffer, offset, count, cancellationToken); }
 
-        public Task<int> ReadAsync(byte[] buffer, int offset, int count) { return Underlying.ReadAsync(buffer, offset, count); }
+        public Task<Int32> ReadAsync(Byte[] buffer, Int32 offset, Int32 count) { return Underlying.ReadAsync(buffer, offset, count); }
 
-        public int ReadByte() { return Underlying.ReadByte(); }
+        public Int32 ReadByte() { return Underlying.ReadByte(); }
 
-        public long Seek(long offset, SeekOrigin origin) { return Underlying.Seek(offset, origin); }
+        public Int64 Seek(Int64 offset, SeekOrigin origin) { return Underlying.Seek(offset, origin); }
 
-        public void SetLength(long value) { Underlying.SetLength(value); }
+        public void SetLength(Int64 value) { Underlying.SetLength(value); }
 
-        public void Write(byte[] buffer, int offset, int count) { Underlying.Write(buffer, offset, count); }
+        public void Write(Byte[] buffer, Int32 offset, Int32 count) { Underlying.Write(buffer, offset, count); }
 
-        public Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) { return Underlying.WriteAsync(buffer, offset, count, cancellationToken); }
+        public Task WriteAsync(Byte[] buffer, Int32 offset, Int32 count, CancellationToken cancellationToken) { return Underlying.WriteAsync(buffer, offset, count, cancellationToken); }
 
-        public Task WriteAsync(byte[] buffer, int offset, int count) { return Underlying.WriteAsync(buffer, offset, count); }
+        public Task WriteAsync(Byte[] buffer, Int32 offset, Int32 count) { return Underlying.WriteAsync(buffer, offset, count); }
 
-        public void WriteByte(byte value) { Underlying.WriteByte(value); }
+        public void WriteByte(Byte value) { Underlying.WriteByte(value); }
     }
 }
