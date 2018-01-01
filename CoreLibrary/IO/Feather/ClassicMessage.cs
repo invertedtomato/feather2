@@ -1,74 +1,155 @@
-﻿using InvertedTomato.Compression.Integers;
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 
 namespace InvertedTomato.IO.Feather {
-    public sealed class GenericMessage : MemoryStream, IMessage {
-        private readonly VLQCodec VLQ = new VLQCodec();
-
-        public GenericMessage WriteUnsignedInteger(UInt64 value) {
-            VLQ.CompressUnsigned(this, value);
+    public sealed class ClassicMessage : MemoryStream, IMessage {
+        public ClassicMessage WriteUInt8(Byte value) {
+            WriteByte(value);
             return this;
         }
-        public GenericMessage WriteNullableUnsignedInteger(UInt64? value) {
+        public ClassicMessage WriteNullableUInt8(Byte? value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
-                WriteUnsignedInteger(value.Value);
+                WriteUInt8(1);
+                WriteUInt8(value.Value);
             }
 
             return this;
         }
 
-        public GenericMessage WriteSignedInteger(Int64 value) {
-            VLQ.CompressSigned(this, value);
+        public ClassicMessage WriteSInt8(SByte value) {
+            WriteByte((Byte)value);
             return this;
         }
-        public GenericMessage WriteNullableSignedInteger(Int64? value) {
+        public ClassicMessage WriteNullableSInt8(SByte? value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
-                WriteSignedInteger(value.Value);
+                WriteUInt8(1);
+                WriteSInt8(value.Value);
             }
 
             return this;
         }
-        
-        public GenericMessage WriteFloat(Single value) {
+
+        public ClassicMessage WriteUInt16(UInt16 value) {
             return WriteByteArray(BitConverter.GetBytes(value));
         }
-        public GenericMessage WriteNullableFloat(Single? value) {
+        public ClassicMessage WriteNullableUInt16(UInt16? value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
+                WriteUInt8(1);
+                WriteUInt16(value.Value);
+            }
+
+            return this;
+        }
+
+        public ClassicMessage WriteSInt16(Int16 value) {
+            return WriteByteArray(BitConverter.GetBytes(value));
+        }
+        public ClassicMessage WriteNullableSInt16(Int16? value) {
+            if(null == value) {
+                WriteUInt8(0);
+            } else {
+                WriteUInt8(1);
+                WriteSInt16(value.Value);
+            }
+
+            return this;
+        }
+
+        public ClassicMessage WriteUInt32(UInt32 value) {
+            return WriteByteArray(BitConverter.GetBytes(value));
+        }
+        public ClassicMessage WriteNullableUInt32(UInt32? value) {
+            if(null == value) {
+                WriteUInt8(0);
+            } else {
+                WriteUInt8(1);
+                WriteUInt32(value.Value);
+            }
+
+            return this;
+        }
+
+        public ClassicMessage WriteSInt32(Int32 value) {
+            return WriteByteArray(BitConverter.GetBytes(value));
+        }
+        public ClassicMessage WriteNullableSInt32(Int32? value) {
+            if(null == value) {
+                WriteUInt8(0);
+            } else {
+                WriteUInt8(1);
+                WriteSInt32(value.Value);
+            }
+
+            return this;
+        }
+
+        public ClassicMessage WriteUInt64(UInt64 value) {
+            return WriteByteArray(BitConverter.GetBytes(value));
+        }
+        public ClassicMessage WriteNullableUInt64(UInt64? value) {
+            if(null == value) {
+                WriteUInt8(0);
+            } else {
+                WriteUInt8(1);
+                WriteUInt64(value.Value);
+            }
+
+            return this;
+        }
+
+        public ClassicMessage WriteSInt64(Int64 value) {
+            return WriteByteArray(BitConverter.GetBytes(value));
+        }
+        public ClassicMessage WriteNullableSInt64(Int64? value) {
+            if(null == value) {
+                WriteUInt8(0);
+            } else {
+                WriteUInt8(1);
+                WriteSInt64(value.Value);
+            }
+
+            return this;
+        }
+
+        public ClassicMessage WriteFloat(Single value) {
+            return WriteByteArray(BitConverter.GetBytes(value));
+        }
+        public ClassicMessage WriteNullableFloat(Single? value) {
+            if(null == value) {
+                WriteUInt8(0);
+            } else {
+                WriteUInt8(1);
                 WriteFloat(value.Value);
             }
 
             return this;
         }
 
-        public GenericMessage WriteDouble(Double value) {
+        public ClassicMessage WriteDouble(Double value) {
             return WriteByteArray(BitConverter.GetBytes(value));
         }
-        public GenericMessage WriteNullableDouble(Double? value) {
+        public ClassicMessage WriteNullableDouble(Double? value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
+                WriteUInt8(1);
                 WriteDouble(value.Value);
             }
 
             return this;
         }
 
-        public GenericMessage WriteBoolean(Boolean value) {
+        public ClassicMessage WriteBoolean(Boolean value) {
             return WriteByteArray(new Byte[] { value ? (Byte)0x01 : (Byte)0x00 });
         }
-        public GenericMessage WriteNullableBoolean(Boolean? value) {
+        public ClassicMessage WriteNullableBoolean(Boolean? value) {
             if(null == value) {
                 WriteBoolean(false);
             } else {
@@ -78,77 +159,77 @@ namespace InvertedTomato.IO.Feather {
             return this;
         }
 
-        public GenericMessage WriteGuid(Guid value) {
+        public ClassicMessage WriteGuid(Guid value) {
             return WriteByteArray(value.ToByteArray());
         }
-        public GenericMessage WriteNullableGuid(Guid? value) {
+        public ClassicMessage WriteNullableGuid(Guid? value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
+                WriteUInt8(1);
                 WriteGuid(value.Value);
             }
 
             return this;
         }
 
-        public GenericMessage WriteTime(TimeSpan value) {
-            return WriteSignedInteger(value.Ticks);
+        public ClassicMessage WriteTime(TimeSpan value) {
+            return WriteSInt64(value.Ticks);
         }
-        public GenericMessage WriteNullableTime(TimeSpan? value) {
+        public ClassicMessage WriteNullableTime(TimeSpan? value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
+                WriteUInt8(1);
                 WriteTime(value.Value);
             }
 
             return this;
         }
 
-        public GenericMessage WriteTimeSimple(TimeSpan value) {
-            return WriteSignedInteger((Int64)value.TotalSeconds);
+        public ClassicMessage WriteTimeSimple(TimeSpan value) {
+            return WriteSInt64((Int64)value.TotalSeconds);
         }
-        public GenericMessage WriteNullableTimeSimple(TimeSpan? value) {
+        public ClassicMessage WriteNullableTimeSimple(TimeSpan? value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
+                WriteUInt8(1);
                 WriteTimeSimple(value.Value);
             }
 
             return this;
         }
 
-        public GenericMessage WriteDateTime(DateTime value) {
-            return WriteSignedInteger(value.Ticks);
+        public ClassicMessage WriteDateTime(DateTime value) {
+            return WriteSInt64(value.Ticks);
         }
-        public GenericMessage WriteNullableDateTime(DateTime? value) {
+        public ClassicMessage WriteNullableDateTime(DateTime? value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
+                WriteUInt8(1);
                 WriteDateTime(value.Value);
             }
 
             return this;
         }
 
-        public GenericMessage WriteDateTimeSimple(DateTime value) {
-            return WriteSignedInteger(value.Ticks / TimeSpan.TicksPerMillisecond); // TODO
+        public ClassicMessage WriteDateTimeSimple(DateTime value) {
+            return WriteSInt64(value.Ticks / TimeSpan.TicksPerMillisecond); // TODO
         }
-        public GenericMessage WriteNullableDateTimeSimple(DateTime? value) {
+        public ClassicMessage WriteNullableDateTimeSimple(DateTime? value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
+                WriteUInt8(1);
                 WriteDateTimeSimple(value.Value);
             }
 
             return this;
         }
 
-        public GenericMessage WriteString(String value) {
+        public ClassicMessage WriteString(String value) {
             if(null == value) {
                 throw new ArgumentNullException(nameof(value));
             }
@@ -157,25 +238,25 @@ namespace InvertedTomato.IO.Feather {
             var raw = Encoding.UTF8.GetBytes(value);
 
             // Write length
-            WriteUnsignedInteger((UInt64)raw.Length);
+            WriteUInt16((UInt16)raw.Length);
 
             // Write raw array
             WriteByteArray(raw);
 
             return this;
         }
-        public GenericMessage WriteNullableString(String value) {
+        public ClassicMessage WriteNullableString(String value) {
             if(null == value) {
-                WriteUnsignedInteger(0);
+                WriteUInt8(0);
             } else {
-                WriteUnsignedInteger(1);
+                WriteUInt8(1);
                 WriteString(value);
             }
 
             return this;
         }
 
-        public GenericMessage WriteByteArray(Byte[] value) {
+        public ClassicMessage WriteByteArray(Byte[] value) {
             if(null == value) {
                 throw new ArgumentNullException(nameof(value));
             }
@@ -193,7 +274,7 @@ namespace InvertedTomato.IO.Feather {
             return buffer;
         }
 
-        public GenericMessage WriteByteArray(Byte[] value, Int32 offset, Int32 count) {
+        public ClassicMessage WriteByteArray(Byte[] value, Int32 offset, Int32 count) {
             if(null == value) {
                 throw new ArgumentNullException(nameof(value));
             }

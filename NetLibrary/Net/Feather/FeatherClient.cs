@@ -1,281 +1,136 @@
-﻿using InvertedTomato.IO.Buffers;
-using InvertedTomato.IO.Feather;
-using InvertedTomato.Testable;
+﻿using InvertedTomato.IO.Feather;
+using InvertedTomato.Net;
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Security;
-using System.Security.Cryptography.X509Certificates;
+using System.Net.Sockets;
 using System.Threading;
 
 namespace InvertedTomato.Net.Feather {
-    public sealed class FeatherClient<TMessage>: IDisposable
-        where TMessage : IMessage, new() {
+    public class FeatherClient<TMessage> : FeatherStream<TMessage> where TMessage : IMessage, new() {
+        private readonly Action<DisconnectionType> OnDisconnection;
+        private readonly Action<TMessage> OnMessage;
+        private readonly Options Options;
+        private readonly Socket UnderlyingSocket;
+        private readonly Thread ReceiveThread;
 
-        /// <summary>
-        /// The remote endpoint.
-        /// </summary>
-        public EndPoint RemoteEndPoint {
-            get {
-                var clientSocket = ClientSocket;
-                if (null == clientSocket) {
-                    return null;
-                }
-                return clientSocket.RemoteEndPoint;
-            }
-        }
+        public FeatherClient(String server) : this(ParseIPEndPoint(server)) { }
 
-        /// <summary>
-        /// The total amount of data transmitted (excluding headers).
-        /// </summary>
-        public Int64 TotalTxBytes { get; private set; }
-
-        /// <summary>
-        /// The total amount of data received (excluding headers).
-        /// </summary>
-        public Int64 TotalRxBytes { get; private set; }
-
-        /// <summary>
-        /// If the connection has been disposed (disconnected).
-        /// </summary>
-        public Boolean IsDisposed { get; private set; }
-
-        /// <summary>
-        /// When the remote disconnects.
-        /// </summary>
-        public Action<DisconnectionType> OnDisconnection;
-
-        /// <summary>
-        /// When a message arrives from this remote.
-        /// </summary>
-        public event Action<TMessage> OnMessage;
-
-        /// <summary>
-        /// Configuration options
-        /// </summary>
-        private Options Options;
-
-        /// <summary>
-        /// Timer to send keep-alive payloads to prevent disconnection.
-        /// </summary>
-        private Timer KeepAliveTimer;
-
-        /// <summary>
-        /// Client socket.
-        /// </summary>
-        private ISocket ClientSocket;
-
-        /// <summary>
-        /// Client stream.
-        /// </summary>
-        private IStream ClientStream;
-
-        /// <summary>
-        /// Receive buffers.
-        /// </summary>
-        private Buffer<Byte> HeaderBuffer;
-
-        /// <summary>
-        /// Number of payloads that haven't made it to the TCP buffer yet. Will be used for back-pressure indication.
-        /// </summary>
-        private Int32 OutstandingSends = 0;
-
-        private Buffer<Byte> PayloadBuffer = null;
-
-        private MessageDecoder NextMessage;
-
+        public FeatherClient(EndPoint server) : this(server, new Options(), null, null) { }
 
         /// <summary>
         /// Connect to a Feather server.
         /// </summary>
         /// <returns>Server connection</returns>
-        public FeatherClient Connect(String serverName, Int32 port) { return Connect(new DnsEndPoint(serverName, port)); }
-
-        /// <summary>
-        /// Connect to a Feather server.
-        /// </summary>
-        /// <returns>Server connection</returns>
-        public FeatherClient Connect(EndPoint endPoint) {
-#if DEBUG
-            if(null == endPoint) {
-                throw new ArgumentNullException("endPoint");
+        public FeatherClient(EndPoint server, Options options, Action<TMessage> onMessage, Action<DisconnectionType> onDisconnection) : base(true) {
+            if(null == server) {
+                throw new ArgumentNullException(nameof(server));
             }
-#endif
-
-            // Open socket
-            var clientSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            clientSocket.Connect(endPoint);
-
-            // Create remote
-            var remote = Remotes[endPoint] = new FeatherClient();
-            remote.Start(false, new SocketReal(clientSocket), Options,
-                (reason) => {
-                    OnClientDisconnection(remote, reason);
-                    Remotes.TryRemove(endPoint);
-                },
-                (message) => { OnMessageReceived(remote, message); }
-            );
-
-            return remote;
-        }
-
-
-        public void Start(Boolean isServerConnection, ISocket clientSocket, Options options, Action<DisconnectionType> onDisconnection, Action<MessageDecoder> onMessage) {
-#if DEBUG
-            if (null == options) {
-                throw new ArgumentNullException("options");
+            if(null == options) {
+                throw new ArgumentNullException(nameof(options));
             }
-            if (null == clientSocket) {
-                throw new ArgumentNullException("clientSocket");
+            if(null == onMessage) {
+                throw new ArgumentNullException(nameof(onMessage));
             }
-            if (null != ClientSocket) {
-                throw new InvalidOperationException("Already started.");
+            if(null == onDisconnection) {
+                throw new ArgumentNullException(nameof(onDisconnection));
             }
-#endif
 
             // Store
             Options = options;
-            OnDisconnection = onDisconnection;
             OnMessage = onMessage;
+            OnDisconnection = onDisconnection;
 
-            // Store and setup socket
-            ClientSocket = clientSocket;
-            ClientSocket.ReceiveBufferSize = Options.ReceiveBufferSize;
-            ClientSocket.SendBufferSize = Options.SendBufferSize;
-            ClientSocket.LingerState = Options.Linger;
-            ClientSocket.NoDelay = Options.NoDelay;
+            // Open socket
+            UnderlyingSocket = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            UnderlyingSocket.SetKeepAlive(Options.KeepAliveSendInterval, Options.KeepAliveRequiredReciveInterval);
+            UnderlyingSocket.ReceiveBufferSize = Options.ReceiveBufferSize;
+            UnderlyingSocket.SendBufferSize = Options.SendBufferSize;
+            UnderlyingSocket.LingerState = Options.Linger;
+            UnderlyingSocket.NoDelay = Options.NoDelay;
+            UnderlyingSocket.Connect(server);
 
             // Get stream
-            if (!Options.IsSecure) {
-                ClientStream = ClientSocket.GetStream();
-            } else if (isServerConnection) {
-                ClientStream = ClientSocket.GetSecureServerStream(Options.ServerCertificate);
-            } else {
-                ClientStream = ClientSocket.GetSecureClientStream(Options.ServerCommonName, ValidateServerCertificate);
+            Underlying = new NetworkStream(UnderlyingSocket, true);
+            if(Options.IsSecure) {
+                var secureStream = new SslStream(Underlying, false);
+                secureStream.AuthenticateAsClientAsync(Options.ServerCommonName).Wait();
+                Underlying = secureStream;
             }
-
-            // Setup keep alive
-            if (options.UseApplicationLayerKeepAlive) {
-                // Start keep-alive timer (must be before receive start)
-                KeepAliveTimer = new Timer(KeepAliveTimer_OnElapsed, null, (Int32)options.KeepAliveInterval.TotalMilliseconds, (Int32)options.KeepAliveInterval.TotalMilliseconds);
-                
-            } else {
-                // Enable TCP keep-alive
-                ClientSocket.SetKeepAlive(true, options.KeepAliveInterval);
-            }
-
-            // Setup receive
-            NextMessage = new MessageDecoder();
-            HeaderBuffer = new Buffer<Byte>(NextMessage.MaxHeaderLength);
 
             // Seed receiving
-            ReceiveHeaderChunk();
+            ReceiveThread = new Thread(ReceiveThread_OnSpin);
+            ReceiveThread.Start();
         }
 
-        /// <summary>
-        /// Send single payload to remote endpoint.
-        /// </summary>    
-        public void Send(MessageEncoder message) {
-#if DEBUG
-            if (null == message) {
-                throw new ArgumentNullException("payload");
+        public FeatherClient(Boolean isServer, Socket socket, Options options, Action<TMessage> onMessage, Action<DisconnectionType> onDisconnection) : base(true) {
+            if(null == socket) {
+                throw new ArgumentNullException(nameof(socket));
             }
-#endif
-
-            RawSend(message.GetBuffer(), null);
-        }
-
-        /// <summary>
-        /// Send single payload to remote endpoint and execute a callback when done.
-        /// </summary>
-        public void Send(MessageEncoder message, Action done) {
-#if DEBUG
-            if (null == message) {
-                throw new ArgumentNullException("payload");
+            if(null == options) {
+                throw new ArgumentNullException(nameof(options));
             }
-#endif
-
-            RawSend(message.GetBuffer(), done);
-        }
-
-        /// <summary>
-        /// Send multiple payloads to remote endpoint.
-        /// </summary>    
-        public void Send(MessageEncoder[] messages) {
-#if DEBUG
-            if (null == messages) {
-                throw new ArgumentNullException("payload");
+            if(null == onMessage) {
+                throw new ArgumentNullException(nameof(onMessage));
             }
-#endif
-
-            Send(messages, null);
-        }
-
-        /// <summary>
-        /// Send multiple payloads to remote endpoint and execute a callback when done.
-        /// </summary>
-        public void Send(MessageEncoder[] messages, Action done) {
-#if DEBUG
-            if (null == messages) {
-                throw new ArgumentNullException("messages");
+            if(null == onDisconnection) {
+                throw new ArgumentNullException(nameof(onDisconnection));
             }
-            foreach (var message in messages) {
-                if (null == message) {
-                    throw new ArgumentNullException("messages", "Element in array.");
+
+            // Store
+            UnderlyingSocket = socket;
+            Options = options;
+            OnMessage = onMessage;
+            OnDisconnection = onDisconnection;
+
+            // Get stream
+            Underlying = (Stream)new NetworkStream(UnderlyingSocket, true);
+            if(Options.IsSecure) {
+                var secureStream = new SslStream(Underlying, false);
+                if(isServer) {
+                    secureStream.AuthenticateAsServerAsync(Options.ServerCertificate).Wait();
+                } else {
+                    secureStream.AuthenticateAsClientAsync(Options.ServerCommonName).Wait();
                 }
+                Underlying = secureStream;
             }
-#endif
-
-            // Get buffers
-            var payloadBuffers = messages.Select(a => a.GetBuffer());
-
-            // Merge into master buffer
-            var masterLength = payloadBuffers.Sum(a => a.Used);
-            var masterBuffer = new Buffer<Byte>(masterLength);
-            foreach(var payloadBuffer in payloadBuffers) {
-                masterBuffer.EnqueueBuffer(payloadBuffer);
-            }
-
-            // Send in one batch
-            RawSend(masterBuffer, done);
+            
+            // Seed receiving
+            ReceiveThread = new Thread(ReceiveThread_OnSpin);
+            ReceiveThread.Start();
         }
 
-        private void RawSend(ReadOnlyBuffer<Byte> buffer, Action done) {
-            // Increment outstanding counter
-            Interlocked.Increment(ref OutstandingSends);
-
-            // Send
+        
+        private void ReceiveThread_OnSpin(Object obj) {
             try {
-                ClientStream.BeginWrite(buffer.GetUnderlying(), buffer.Start, buffer.Used, (ar) => {
-                    try {
-                        // Complete send
-                        ClientStream.EndWrite(ar);
-                    } catch (ObjectDisposedException) {
-                    } catch (IOException) {
-                        // Report connection failure
-                        DisconnectInner(DisconnectionType.ConnectionInterupted);
-                        return;
-                    } finally {
-                        // Update total-TX counter
-                        TotalTxBytes = unchecked(TotalTxBytes + buffer.Used);
-
-                        // Decrement outstanding counter
-                        Interlocked.Decrement(ref OutstandingSends);
-
-                        // Callback success
-                        done.TryInvoke();
-                    }
-                }, null);
-            } catch (ObjectDisposedException) {
-            } catch (IOException) {
-                // Report connection failure
+                while(!IsDisposed) {
+                    var message = Read(); // TODO: Timeout?
+                    OnMessage(message);
+                }
+            } catch(ObjectDisposedException) {
+            } catch(IOException) {
                 DisconnectInner(DisconnectionType.ConnectionInterupted);
             }
+        }
 
-            // Restart keep-alive timer
-            if (Options.UseApplicationLayerKeepAlive) {
-                KeepAliveTimer.Change((Int32)Options.KeepAliveInterval.TotalMilliseconds, (Int32)Options.KeepAliveInterval.TotalMilliseconds);
+        public override TMessage Read() {
+            try {
+                return base.Read();
+            } catch(IOException) {
+                DisconnectInner(DisconnectionType.ConnectionInterupted);
+                throw;
+            }
+        }
+
+        public override void Write(TMessage message) {
+            try {
+                 base.Write(message);
+            } catch(IOException) {
+                DisconnectInner(DisconnectionType.ConnectionInterupted);
+                throw;
             }
         }
 
@@ -285,143 +140,14 @@ namespace InvertedTomato.Net.Feather {
         public void Disconnect() {
             DisconnectInner(DisconnectionType.LocalDisconnection);
         }
-
-        private void ReceiveHeaderChunk() {
-            // Calculate size of next chunk to receive
-            var chunkSize = HeaderBuffer.IsEmpty ? NextMessage.MinHeaderLength : 1;
-
-            try {
-                // Request next chunk
-                ClientStream.BeginRead(HeaderBuffer, chunkSize, OnHeaderChunkReceived, null);
-            } catch (ObjectDisposedException) {
-            } catch (IOException) {
-                // Report connection failure
-                DisconnectInner(DisconnectionType.ConnectionInterupted);
-            }
-        }
-
-        private void OnHeaderChunkReceived(IAsyncResult ar) {
-            // Complete receive and get read length
-            Int32 rxBytes = 0;
-            try {
-                rxBytes = ClientStream.EndRead(ar);
-            } catch (ObjectDisposedException) {
-                return;
-            } catch (IOException) {
-                DisconnectInner(DisconnectionType.ConnectionInterupted);
-                return;
-            }
-
-            // Handle connection reset
-            if (rxBytes == 0) {
-                DisconnectInner(DisconnectionType.RemoteDisconnection);
-                return;
-            }
-
-            // Update buffer end
-            HeaderBuffer.IncrementEnd(rxBytes);
-
-            // Increment received bytes
-            TotalRxBytes = unchecked(TotalRxBytes + rxBytes);
-
-            // Attempt to get length
-            var length = NextMessage.GetPayloadLength(HeaderBuffer);
-
-            // If length is unknown...
-            if (length == 0) {
-                // Check if the header is too long
-                if (HeaderBuffer.IsFull) {
-                    DisconnectInner(DisconnectionType.MalformedPayload);
-                    return;
-                }
-
-                // Get another byte
-                ReceiveHeaderChunk();
-                return;
-            }
-
-            // Allocate payload buffer
-            PayloadBuffer = HeaderBuffer.Resize(length);
-
-            // Clear header buffer
-            HeaderBuffer.Reset();
-
-            // Receive payload
-            ReceivePayload();
-        }
-
-        private void ReceivePayload() {
-            // If not all payload has arrived...
-            if (!PayloadBuffer.IsFull) {
-                // Fetch another chunk
-                ReceivePayloadChunk();
-
-                return;
-            }
-
-            // Prepare message
-            NextMessage.LoadBuffer(PayloadBuffer);
-
-            // Return message
-            OnMessage?.Invoke(NextMessage);
-
-            // Reset for next message
-            NextMessage = new MessageDecoder();
-
-            // Receive next header
-            ReceiveHeaderChunk();
-        }
-
-        private void ReceivePayloadChunk() {
-            try {
-                // Request next chunk
-                ClientStream.BeginRead(PayloadBuffer, OnPayloadChunkReceived, null);
-            } catch (ObjectDisposedException) {
-            } catch (IOException) {
-                // Report connection failure
-                DisconnectInner(DisconnectionType.ConnectionInterupted);
-            }
-        }
-
-        private void OnPayloadChunkReceived(IAsyncResult ar) {
-            // Complete receive and get read length
-            Int32 rxBytes = 0;
-            try {
-                rxBytes = ClientStream.EndRead(ar);
-            } catch (ObjectDisposedException) {
-                return;
-            } catch (IOException) {
-                DisconnectInner(DisconnectionType.ConnectionInterupted);
-                return;
-            }
-
-            // Handle connection reset
-            if (rxBytes == 0) {
-                DisconnectInner(DisconnectionType.RemoteDisconnection);
-                return;
-            }
-
-            // Update buffer end
-            PayloadBuffer.IncrementEnd(rxBytes);
-
-            // Receive payload
-            ReceivePayload();
-        }
-
-        /// <summary>
-        /// Fires when a payload hasn't been sent in the keep-alive interval in order to prevent a receive-timeout on the remote end.
-        /// </summary>
-        private void KeepAliveTimer_OnElapsed(Object state) {
-            // Send blank payload - it will reset the timeout on the remote end, however not be delivered as an actual payload
-            RawSend(NextMessage.GetNullPayload(), null);
-        }
+        
 
         /// <summary>
         /// Handle internal disconnect requests.
         /// </summary>
         /// <param name="reason"></param>
         private void DisconnectInner(DisconnectionType reason) {
-            if (IsDisposed) {
+            if(IsDisposed) {
                 return;
             }
             Dispose();
@@ -433,50 +159,53 @@ namespace InvertedTomato.Net.Feather {
         /// Dispose.
         /// </summary>
         /// <param name="disposing"></param>
-        private void Dispose(Boolean disposing) {
-            if (IsDisposed) {
+        private new void Dispose(Boolean disposing) {
+            if(IsDisposed) {
                 return;
             }
-            IsDisposed = true;
 
-            if (disposing) {
-                // Stop keep-alive sending
-                KeepAliveTimer?.Dispose();
-
-                // Dispose managed state (managed objects)
-                ClientStream?.Dispose();
-
-                var clientSocket = ClientSocket;
-                if (null != clientSocket) {
-                    // Dispose socket
-                    clientSocket.Dispose();
-                }
-
+            if(disposing) {
+                base.Dispose();
+                UnderlyingSocket?.Shutdown(SocketShutdown.Both);
+                UnderlyingSocket?.Dispose();
+                ReceiveThread.Join();
             }
-
-            // Set large fields to null
-            //ClientSocket = null;
-            //ClientStream = null; // Do not set to null
         }
 
         /// <summary>
         /// Dispose.
         /// </summary>
-        public void Dispose() {
+        public new void Dispose() {
             Dispose(true);
         }
 
-        /// <summary>
-        /// Validate certificates given by servers, on the client end.
-        /// </summary>
-        private static Boolean ValidateServerCertificate(Object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors policyErrors) {
-            // If there are no errors, return success
-            if (policyErrors == SslPolicyErrors.None) {
-                return true;
+        private static IPEndPoint ParseIPEndPoint(String value) {
+            if(null == value) {
+                throw new ArgumentNullException(nameof(value));
             }
 
-            // Do not allow this client to communicate with unauthenticated servers
-            return false;
+            var ep = value.Split(':');
+            if(ep.Length < 2) {
+                throw new FormatException("Invalid endpoint format");
+            }
+
+            IPAddress ip;
+            if(ep.Length > 2) {
+                if(!IPAddress.TryParse(string.Join(":", ep, 0, ep.Length - 1), out ip)) {
+                    throw new FormatException("Invalid ip-adress");
+                }
+            } else {
+                if(!IPAddress.TryParse(ep[0], out ip)) {
+                    throw new FormatException("Invalid ip-adress");
+                }
+            }
+
+            Int32 port;
+            if(!int.TryParse(ep[ep.Length - 1], NumberStyles.None, NumberFormatInfo.CurrentInfo, out port)) {
+                throw new FormatException("Invalid port");
+            }
+
+            return new IPEndPoint(ip, port);
         }
     }
 }

@@ -1,16 +1,13 @@
 ﻿using Benchmark.Records;
-using InvertedTomato.IO.Feather.ClassicCodec;
 using ManagedXZ;
 using System;
 using System.Diagnostics;
 using System.IO;
-using ThreePlay.IO.Feather;
 
 namespace Benchmark {
     class Program {
-        static void Main(string[] args) {
+        static void Main(String[] args) {
             Stopwatch stopwatch;
-            ClassicDecoder readerPayload;
 
             // Decompress test data
             if (!File.Exists("test-data.mtd")) {
@@ -34,7 +31,7 @@ namespace Benchmark {
                                 break;
                         }
                     }
-                    Console.WriteLine("Baseline: " + stopwatch.ElapsedMilliseconds + "ms " + Math.Round((double)input.Length / 1024 / 1024, 2) + "MB");
+                    Console.WriteLine("Baseline: " + stopwatch.ElapsedMilliseconds + "ms " + Math.Round((Double)input.Length / 1024 / 1024, 2) + "MB");
                     input.Position = 0;
 
                     // CLASSIC
@@ -56,7 +53,7 @@ namespace Benchmark {
                                         break;
                                 }
                             }
-                            Console.WriteLine("Classic:  " + stopwatch.ElapsedMilliseconds + "ms " + Math.Round((double)output.Length / 1024 / 1024, 2) + "MB");
+                            Console.WriteLine("Classic:  " + stopwatch.ElapsedMilliseconds + "ms " + Math.Round((Double)output.Length / 1024 / 1024, 2) + "MB");
                             input.Position = 0;
                         }
                     }
@@ -81,7 +78,7 @@ namespace Benchmark {
                                 }
 
                             }
-                            Console.WriteLine("CSV:      " + stopwatch.ElapsedMilliseconds + "ms " + Math.Round((double)output.Length / 1024 / 1024, 2) + "MB");
+                            Console.WriteLine("CSV:      " + stopwatch.ElapsedMilliseconds + "ms " + Math.Round((Double)output.Length / 1024 / 1024, 2) + "MB");
                             input.Position = 0;
                         }
                     }

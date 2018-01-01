@@ -3,12 +3,12 @@ using InvertedTomato.IO.Feather;
 using InvertedTomato.Testable;
 using System;
 using System.Collections.Concurrent;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 
 namespace InvertedTomato.Net.Feather {
-    public sealed class FeatherServer<TMessage> : IDisposable
-        where TMessage : IMessage, new() {
+    public sealed class FeatherServer<TMessage> : IDisposable where TMessage : Stream, new() {
 
         /// <summary>
         /// When a client connects.

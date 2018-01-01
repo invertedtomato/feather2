@@ -5,7 +5,7 @@ using System.Net;
 
 namespace Benchmark.Records {
     public sealed class ConnectionRecord {
-        public const byte OpCode = 0x02;
+        public const Byte OpCode = 0x02;
 
         public DateTime OpenAt { get; set; }
         public DateTime CloseAt { get; set; }
@@ -14,12 +14,12 @@ namespace Benchmark.Records {
         public IPAddress IntermediateIPAddress { get; set; }
         public IPAddress DestinationIPAddress { get; set; }
 
-        public ushort SourcePort { get; set; }
-        public ushort DestinationPort { get; set; }
+        public UInt16 SourcePort { get; set; }
+        public UInt16 DestinationPort { get; set; }
 
-        public uint PacketCount { get; set; }
-        public uint Layer3Length { get; set; }
-        public byte IPProtocol { get; set; }
+        public UInt32 PacketCount { get; set; }
+        public UInt32 Layer3Length { get; set; }
+        public Byte IPProtocol { get; set; }
         
         public ClassicEncoder ToClassic() {
             var payload = new ClassicEncoder();

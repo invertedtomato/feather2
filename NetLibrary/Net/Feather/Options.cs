@@ -21,9 +21,14 @@ namespace InvertedTomato.Net.Feather {
         public String ServerCommonName { get; set; } = null;
 
         /// <summary>
-        /// A keep-alive message will be sent after this amount of time if no other message has been sent. If the connection has been broken the issue will be detected causing a disconnection.
+        /// A keep-alive message will be sent after this amount of time if no other message has been sent. 
         /// </summary>
-        public TimeSpan KeepAliveInterval { get; set; } = TimeSpan.FromSeconds(10);
+        public TimeSpan KeepAliveSendInterval { get; set; } = TimeSpan.FromSeconds(5);
+
+        /// <summary>
+        /// If no messages are received in this period it is assumed that there is a communication issue and the connection will be forcefully closed.
+        /// </summary>
+        public TimeSpan KeepAliveRequiredReciveInterval { get; set; } = TimeSpan.FromSeconds(15);
 
         /// <summary>
         /// Use the application-level keep-alive option instead of the standard TCP keep-alive. This works around buggy TCP implementations on some remote devices.

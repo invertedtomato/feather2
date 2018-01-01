@@ -6,14 +6,25 @@
     <RootNamespace>InvertedTomato</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="Testable\**" />
+    <EmbeddedResource Remove="Testable\**" />
+    <None Remove="Testable\**" />
+  </ItemGroup>
+
   <ItemGroup>
     <Compile Remove="Net\Feather\ZeroUDP.cs" />
     <Compile Remove="Net\Feather\ZeroUDPOptions.cs" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="InvertedTomato.Buffers" Version="1.0.9" />
+    <PackageReference Include="System.Net.Security" Version="4.3.2" />
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
+    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
     <PackageReference Include="System.Threading.Timer" Version="4.3.0" />
   </ItemGroup>
 

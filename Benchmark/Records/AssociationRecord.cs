@@ -5,11 +5,11 @@ using System.Net;
 
 namespace Benchmark.Records {
     public sealed class AssociationRecord {
-        public const byte OpCode = 0x01;
+        public const Byte OpCode = 0x01;
 
         public IPAddress IPAddress { get; set; }
-        public byte[] MACAddress { get; set; }
-        public string Label { get; set; }
+        public Byte[] MACAddress { get; set; }
+        public String Label { get; set; }
 
         public static AssociationRecord FromClassic(ClassicDecoder payload) {
             var record = new AssociationRecord();
@@ -26,7 +26,7 @@ namespace Benchmark.Records {
             var payload = new ClassicEncoder();
             payload.WriteUInt8(OpCode);
             payload.WriteIPAddress(IPAddress);
-            payload.Write(MACAddress.Length == 8 ? MACAddress : new byte[6]);
+            payload.Write(MACAddress.Length == 8 ? MACAddress : new Byte[6]);
             payload.WriteString(Label);
 
             return payload;
