@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Text;
+using System.Linq;
 
 namespace InvertedTomato.IO.Feather {
     public sealed class GenericMessage : MemoryStream, IMessage {
@@ -187,7 +188,7 @@ namespace InvertedTomato.IO.Feather {
         public Byte[] ReadByteArray(Int32 count) {
             var buffer = new Byte[count];
             if(Read(buffer, 0, buffer.Length) != count) {
-                throw new OverflowException();
+                throw new EndOfStreamException();
             }
 
             return buffer;
@@ -214,94 +215,28 @@ namespace InvertedTomato.IO.Feather {
 
 
 
-        public Byte ReadUInt8() {
-            return ReadByteArray(1)[0];
+        public UInt64 ReadUnsignedInteger() {
+            return VLQ.DecompressUnsigned(this, 1).Single();
         }
-        public Byte? ReadNullableUInt8() {
+        public UInt64? ReadNullableUInt8() {
             if(ReadBoolean()) {
-                return ReadUInt8();
+                return ReadUnsignedInteger();
             } else {
                 return null;
             }
         }
 
-        public SByte ReadSInt8() {
-            return (SByte)ReadByteArray(1)[0];
+        public Int64 ReadSignedInteger() {
+            return VLQ.DecompressSigned(this, 1).Single();
         }
-        public SByte? ReadNullableSInt8() {
+        public Int64? ReadNullableSInt8() {
             if(ReadBoolean()) {
-                return ReadSInt8();
+                return ReadSignedInteger();
             } else {
                 return null;
             }
         }
-
-        public UInt16 ReadUInt16() {
-            return BitConverter.ToUInt16(ReadByteArray(2), 0);
-        }
-        public UInt16? ReadNullableUInt16() {
-            if(ReadBoolean()) {
-                return ReadUInt16();
-            } else {
-                return null;
-            }
-        }
-
-        public Int16 ReadSInt16() {
-            return BitConverter.ToInt16(ReadByteArray(2), 0);
-        }
-        public Int16? ReadNullableSInt16() {
-            if(ReadBoolean()) {
-                return ReadSInt16();
-            } else {
-                return null;
-            }
-        }
-
-        public UInt32 ReadUInt32() {
-            return BitConverter.ToUInt32(ReadByteArray(4), 0);
-        }
-        public UInt32? ReadNullableUInt32() {
-            if(ReadBoolean()) {
-                return ReadUInt32();
-            } else {
-                return null;
-            }
-        }
-
-        public Int32 ReadSInt32() {
-            return BitConverter.ToInt32(ReadByteArray(4), 0);
-        }
-        public Int32? ReadNullableSInt32() {
-            if(ReadBoolean()) {
-                return ReadSInt32();
-            } else {
-                return null;
-            }
-        }
-
-        public UInt64 ReadUInt64() {
-            return BitConverter.ToUInt64(ReadByteArray(8), 0);
-        }
-        public UInt64? ReadNullableUInt64() {
-            if(ReadBoolean()) {
-                return ReadUInt64();
-            } else {
-                return null;
-            }
-        }
-
-        public Int64 ReadSInt64() {
-            return BitConverter.ToInt64(ReadByteArray(8), 0);
-        }
-        public Int64? ReadNullableSInt64() {
-            if(ReadBoolean()) {
-                return ReadSInt64();
-            } else {
-                return null;
-            }
-        }
-
+        
         public Single ReadFloat() {
             return BitConverter.ToSingle(ReadByteArray(4), 0);
         }
@@ -325,7 +260,14 @@ namespace InvertedTomato.IO.Feather {
         }
 
         public Boolean ReadBoolean() {
-            return ReadUInt8() > 0;
+            var a = ReadByteArray(1).Single();
+            if(a == 0x00) {
+                return false;
+            }else if(a == 0x01) {
+                return true;
+            } else {
+                throw new MalformedPayloadException("Expected 0x01 or 0x00.");
+            }
         }
         public Boolean? ReadNullableBoolean() {
             if(ReadBoolean()) {
@@ -347,7 +289,7 @@ namespace InvertedTomato.IO.Feather {
         }
 
         public TimeSpan ReadTime() {
-            return new TimeSpan(ReadSInt64());
+            return new TimeSpan(ReadSignedInteger());
         }
         public TimeSpan? ReadNullableTime() {
             if(ReadBoolean()) {
@@ -358,7 +300,7 @@ namespace InvertedTomato.IO.Feather {
         }
 
         public TimeSpan ReadTimeSimple() {
-            return new TimeSpan(ReadSInt64() * TimeSpan.TicksPerSecond);
+            return new TimeSpan(ReadSignedInteger() * TimeSpan.TicksPerSecond);
         }
         public TimeSpan? ReadNullableTimeSimple() {
             if(ReadBoolean()) {
@@ -369,7 +311,7 @@ namespace InvertedTomato.IO.Feather {
         }
 
         public DateTime ReadDateTime() {
-            return new DateTime(ReadSInt64());
+            return new DateTime(ReadSignedInteger());
         }
         public DateTime? ReadNullableDateTime() {
             if(ReadBoolean()) {
@@ -380,7 +322,7 @@ namespace InvertedTomato.IO.Feather {
         }
 
         public DateTime ReadDateTimeSimple() {
-            return new DateTime(ReadSInt64() * TimeSpan.TicksPerMillisecond);
+            return new DateTime(ReadSignedInteger() * TimeSpan.TicksPerMillisecond);
         }
         public DateTime? ReadNullableDateTimeSimple() {
             if(ReadBoolean()) {
@@ -391,7 +333,7 @@ namespace InvertedTomato.IO.Feather {
         }
 
         public String ReadString() {
-            var length = ReadUInt16();
+            var length = (Int32)ReadUnsignedInteger();
 
             var raw = ReadByteArray(length);
             return Encoding.UTF8.GetString(raw, 0, raw.Length);

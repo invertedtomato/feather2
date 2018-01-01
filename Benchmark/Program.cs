@@ -57,31 +57,6 @@ namespace Benchmark {
                             input.Position = 0;
                         }
                     }
-
-                    // CSV
-
-                    using (var output = new MemoryStream()) {
-                        using (var writer = new FeatherWriter(output)) {
-
-                            // Iterate through all records
-                            stopwatch = Stopwatch.StartNew();
-                            while ((readerPayload = reader.Read<ClassicDecoder>()) != null) {
-                                switch (readerPayload.ReadUInt8()) {
-                                    case AssociationRecord.OpCode: // Association
-                                        var association = AssociationRecord.FromClassic(readerPayload);
-                                        writer.Write(association.ToCSV());
-                                        break;
-                                    case ConnectionRecord.OpCode: // Connection
-                                        var connection = ConnectionRecord.FromClassic(readerPayload);
-                                        writer.Write(connection.ToCSV());
-                                        break;
-                                }
-
-                            }
-                            Console.WriteLine("CSV:      " + stopwatch.ElapsedMilliseconds + "ms " + Math.Round((Double)output.Length / 1024 / 1024, 2) + "MB");
-                            input.Position = 0;
-                        }
-                    }
                 }
 
                 Console.ReadKey(true);

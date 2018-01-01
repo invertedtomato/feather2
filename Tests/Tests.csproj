@@ -56,18 +56,17 @@
     </Otherwise>
   </Choose>
   <ItemGroup>
-    <Compile Include="CSVEncoderTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="CSVDecoderTests.cs" />
-    <Compile Include="FeatherReaderTests.cs" />
-    <Compile Include="FeatherWriterTests.cs" />
-    <Compile Include="ClassicEncoderTests.cs" />
-    <Compile Include="ClassicDecoderTests.cs" />
-    <Compile Include="ConnectionBaseTests.cs" />
-    <Compile Include="FeatherTCPTests.cs" />
+    <Compile Include="GenericMessageTests.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CoreLibrary\CoreLibrary.csproj">
+      <Project>{a7dbabdf-910a-4293-b979-948fde883991}</Project>
+      <Name>CoreLibrary</Name>
+    </ProjectReference>
   </ItemGroup>
   <Choose>
     <When Condition="'$(VisualStudioVersion)' == '10.0' And '$(IsCodedUITest)' == 'True'">
