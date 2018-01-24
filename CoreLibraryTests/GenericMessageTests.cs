@@ -1,3 +1,4 @@
+using InvertedTomato.Compression.Integers;
 using InvertedTomato.IO.Bits;
 using InvertedTomato.IO.Feather;
 using System;
@@ -20,14 +21,14 @@ namespace CoreLibraryTests {
         [Fact]
         public void UnsignedInteger_Max() {
             var msg = new GenericMessage();
-            msg.WriteUnsignedInteger(UInt64.MaxValue);
+            msg.WriteUnsignedInteger(VLQCodec.MaxValue);
 
             var payload = msg.ToByteArray();
             Assert.Equal("01111111 01111110 01111110 01111110 01111110 01111110 01111110 01111110 01111110 10000000", payload.ToBinaryString());
 
             msg = new GenericMessage();
             msg.FromByteArray(payload);
-            Assert.Equal(UInt64.MaxValue, msg.ReadUnsignedInteger());
+            Assert.Equal(VLQCodec.MaxValue, msg.ReadUnsignedInteger());
         }
         
         [Fact]

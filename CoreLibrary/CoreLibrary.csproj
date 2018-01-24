@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard1.3</TargetFramework>
-    <AssemblyName>InvertedTomato.Feather2Core</AssemblyName>
+    <AssemblyName>InvertedTomato.Feather2.Core</AssemblyName>
     <RootNamespace>InvertedTomato</RootNamespace>
   </PropertyGroup>
 
