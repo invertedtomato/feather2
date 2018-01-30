@@ -2,52 +2,33 @@ L+C*P*
 
 L+ VLQ Encoded length header
 C* Code field, used for matching message type
+T* Topic field
 P* Message payload
 
 ** I'm thinking the focus should be on FeatherStream, and allowing it to be easily attached to a NetworkStream, FileStream or SecureStream. Maybe extension methods for Socket to make the process easier?
+** Messages should have a UInt32 code built into them
 
-class FeatherStream : IDisposable {
-	FeatherStream(Stream underlying);
-	FeatherStream(Stream underlying, Boolean isOwned);
+class MessageStream : IDisposable {
+	MessageStream(Stream underlying);
+	MessageStream(Stream underlying, Boolean isOwned);
 
-	async TMessage Read<TMessage>(Int32 code) where TMessage : IMessage, new();
-	async void Write<TMessage>(Int32 code) where TMessage : IMessage;
+	async void Write<TMessage>() where TMessage : IMessage;
 
-	static FeatherStream OpenFile(String fileName, FileAccess access);
+	async TMessage Read<TMessage>() where TMessage : IMessage, new();
 }
 
 
 ** Then need to make it easy to use (don't forget SSL!)
 
 
-var socket = new Socket();
-socket.Connect(...);
-var stream = socket.GetFeatherStream();  // ??
-var secureStream = socket.GetSecureFeatherStream(); // ??
-
-var file = File.Open(...);
-file.GetFeatherStream(); // ??
 
 
-public interface FeatherTCPSocket :IDisposable {
-	Int32 Available {get;}
-	Boolean NoDelay {get;set;}
-	Int32 ReceiveBufferSize {get;set;}
-	Int32 SendBufferSize {get;set;}
-	
-	async void Connect(EndPoint remoteEndPoint);
-	async void Connect(EndPoint localEndpoint, EndPoint remoteEndPoint);
+InvertedTomato.IO.Feather.Message
+InvertedTomato.IO.Feather.MessageStream
 
-	async void Listen(Int32 port);
-	async void Listen(EndPoint remoteEndPoint);
+InvertedTomato.Net.Zeta.FeatherUdpPublisher
+InvertedTomato.Net.Zeta.FeatherUdpSubscriber
+InvertedTomato.Net.Zeta.FeatherWsPublisher
+InvertedTomato.Net.Zeta.FeatherWsSubscriber
 
-	async void Disconnect();
-	
-	void Close();
-	
-	async FeatherTCPSocket Accept();
-
-	async TMessage Receive<TMessage>(Int32 code) where TMessage : IMessage, new();
-	async void Send<TMessage>(Int32 code) where TMessage : IMessage;
-}
-
+InvertedTomato.Net.Feather.FeatherTCPSocket
