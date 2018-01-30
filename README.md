@@ -1,5 +1,4 @@
 # InvertedTomato.Feather2
-The successor to InvertedTomato.Feather. It has a better interface and the ability to use
-a selection of codecs.
+The proposed successor to InvertedTomato.Feather, with a better interface, more flexibility and improved performance.
 
-Not yet ready for use. Coming soon!
+It's still under development and will be awhile yet.

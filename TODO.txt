@@ -1,30 +1,53 @@
-Use VLQ for framing header (don't try and use the codec - it's seemingly impossible to know the header length from this perspective)
-Wire up IIntegerCodec for compression.
+L+C*P*
+
+L+ VLQ Encoded length header
+C* Code field, used for matching message type
+P* Message payload
+
+** I'm thinking the focus should be on FeatherStream, and allowing it to be easily attached to a NetworkStream, FileStream or SecureStream. Maybe extension methods for Socket to make the process easier?
+
+class FeatherStream : IDisposable {
+	FeatherStream(Stream underlying);
+	FeatherStream(Stream underlying, Boolean isOwned);
+
+	async TMessage Read<TMessage>(Int32 code) where TMessage : IMessage, new();
+	async void Write<TMessage>(Int32 code) where TMessage : IMessage;
+
+	static FeatherStream OpenFile(String fileName, FileAccess access);
+}
 
 
-class FeatherServer<T> where T: IMessage{
-	event Action<EndPoint, FeatherClient> OnClientConnection;
-	event Action<EndPoint, DisconnectionType> OnClientDisconnection;
-	event Action<EndPoint, FeatherClient, T> OnMessageReceived;    Needed??
+** Then need to make it easy to use (don't forget SSL!)
 
-	FeatherServer(UInt16 port);
-	FeatherServer(EndPoint endpoint, Options options);
+
+var socket = new Socket();
+socket.Connect(...);
+var stream = socket.GetFeatherStream();  // ??
+var secureStream = socket.GetSecureFeatherStream(); // ??
+
+var file = File.Open(...);
+file.GetFeatherStream(); // ??
+
+
+public interface FeatherTCPSocket :IDisposable {
+	Int32 Available {get;}
+	Boolean NoDelay {get;set;}
+	Int32 ReceiveBufferSize {get;set;}
+	Int32 SendBufferSize {get;set;}
 	
-	void SendAll(T);
+	async void Connect(EndPoint remoteEndPoint);
+	async void Connect(EndPoint localEndpoint, EndPoint remoteEndPoint);
+
+	async void Listen(Int32 port);
+	async void Listen(EndPoint remoteEndPoint);
+
+	async void Disconnect();
+	
+	void Close();
+	
+	async FeatherTCPSocket Accept();
+
+	async TMessage Receive<TMessage>(Int32 code) where TMessage : IMessage, new();
+	async void Send<TMessage>(Int32 code) where TMessage : IMessage;
 }
 
-class FeatherClient<T> where T : IMessage{
-	event Action<T> OnMessageReceived;
-
-	void SendTmsg);
-}
-
-class FeatherReader<T>  where T : IMessage{
-	static OpenFile(string fileName)
-	T Read();
-}
-
-class FeatherWriter<T> where T : IMessage{
-	static OpenFile(string fileName
-	void Write(T msg);
-}
