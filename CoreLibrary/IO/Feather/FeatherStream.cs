@@ -1,10 +1,11 @@
 ﻿using InvertedTomato.Compression.Integers;
+using InvertedTomato.IO.Messages;
 using System;
 using System.IO;
 using System.Linq;
 
 namespace InvertedTomato.IO.Feather {
-    public class FeatherStream<TMessage> : IDisposable where TMessage : IMessage, new() {
+    public class FeatherStream<TMessage> : IDisposable where TMessage : IImportableMessage, IExportableMessage, new() {
         /// <summary>
         /// If the file has been disposed.
         /// </summary>
@@ -45,7 +46,7 @@ namespace InvertedTomato.IO.Feather {
 
                 // Create message
                 var message = default(TMessage);
-                message.FromByteArray(payload);
+                message.Import(new ArraySegment<byte>(payload));
 
                 return message;
             }
@@ -58,13 +59,13 @@ namespace InvertedTomato.IO.Feather {
                 }
 
                 // Extract payload
-                var payload = message.ToByteArray();
+                var payload = message.Export();
 
                 // Write length
-                VLQ.CompressUnsigned(Underlying, payload.Length);
+                VLQ.CompressUnsigned(Underlying, payload.Count);
 
                 // Write payload
-                Underlying.Write(payload, 0, payload.Length);
+                Underlying.Write(payload.Array, payload.Offset, payload.Count);
             }
         }
 
