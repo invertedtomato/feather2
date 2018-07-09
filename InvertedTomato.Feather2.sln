@@ -15,7 +15,9 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		TODO.txt = TODO.txt
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLibraryTests", "NetLibraryTests\NetLibraryTests.csproj", "{83F7AF14-BD61-4881-9DC9-14B37DD5B649}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "NetLibraryTests", "NetLibraryTests\NetLibraryTests.csproj", "{83F7AF14-BD61-4881-9DC9-14B37DD5B649}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NetLibrarySample", "NetLibrarySample\NetLibrarySample.csproj", "{216DDABB-BABE-4DB7-BFE8-83CBFEC76CD4}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -39,6 +41,10 @@ Global
 		{83F7AF14-BD61-4881-9DC9-14B37DD5B649}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{83F7AF14-BD61-4881-9DC9-14B37DD5B649}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{83F7AF14-BD61-4881-9DC9-14B37DD5B649}.Release|Any CPU.Build.0 = Release|Any CPU
+		{216DDABB-BABE-4DB7-BFE8-83CBFEC76CD4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{216DDABB-BABE-4DB7-BFE8-83CBFEC76CD4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{216DDABB-BABE-4DB7-BFE8-83CBFEC76CD4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{216DDABB-BABE-4DB7-BFE8-83CBFEC76CD4}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
