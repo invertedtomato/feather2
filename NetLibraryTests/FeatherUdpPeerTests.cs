@@ -62,7 +62,34 @@ namespace NetLibraryTests {
 
         [Fact]
         public void ReceiveMessage() {
-            throw new NotImplementedException();
+            var stage = 0;
+            var block = new AutoResetEvent(false);
+
+            using (var peer = new FeatherUdpPeer<BinaryMessage>()) {
+                peer.OnMessageReceived += (endpoint, message) => {
+                    if (stage == 0) {
+                        Assert.Equal(TestPayload1, message.Export().ToArray());
+                        stage = 1;
+                    }else if (stage == 1) {
+                        Assert.Equal(TestPayload2, message.Export().ToArray());
+                        stage = 2;
+                        block.Set();
+                    } else {
+                        Assert.False(true);
+                    }
+                };
+                peer.Bind(12348);
+
+                using (var socket = new Socket(SocketType.Dgram, ProtocolType.Udp)) {
+                    socket.SendTo(TestPayload1, new IPEndPoint(IPAddress.Loopback, 12348));
+                    Thread.Sleep(10);
+                    socket.SendTo(TestPayload2, new IPEndPoint(IPAddress.Loopback, 12348));
+                }
+            }
+
+            block.WaitOne(1000);
+
+            Assert.Equal(2, stage);
         }
 
         [Fact]

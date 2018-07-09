@@ -9,7 +9,6 @@ using InvertedTomato.IO.Messages;
 namespace InvertedTomato.Net.Feather {
     public class FeatherUdpPeer<TMessage> : IDisposable where TMessage : IImportableMessage, IExportableMessage, new() {
         private readonly Socket Underlying = new Socket(SocketType.Dgram, ProtocolType.Udp);
-        private readonly Thread ReceiveThread;
         private readonly Object Sync = new Object();
 
         public event Action<EndPoint, TMessage> OnMessageReceived;
@@ -20,31 +19,28 @@ namespace InvertedTomato.Net.Feather {
         public bool IsDisposed { get; private set; }
 
         public FeatherUdpPeer() {
-            ReceiveThread = new Thread(ReceiveThreadWorker);
+            
         }
 
-        private void ReceiveThreadWorker(object obj) {
+        private void StartReceive() {
+            var args = new SocketAsyncEventArgs();
+            args.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+            args.SocketFlags = SocketFlags.None;
+            args.SetBuffer(new byte[ReceiveMaxMessageSize], 0, ReceiveMaxMessageSize);
+            args.Completed += (sender, e) => {
+                // Instantiate message
+                var message = new TMessage();
+                message.Import(new ArraySegment<byte>(e.Buffer, 0, e.BytesTransferred));
+
+                // Raise received event
+                OnMessageReceived(e.RemoteEndPoint, message);
+
+                StartReceive();
+            };
+
             try {
-                var buffer = new byte[ReceiveMaxMessageSize];
-
-                while (!IsDisposed) {
-                    // Read message
-                    SocketFlags flags = SocketFlags.None;
-                    EndPoint endPoint = new IPEndPoint(IPAddress.Any, 0);
-                    IPPacketInformation info;
-                    var length = Underlying.ReceiveMessageFrom(buffer, 0, buffer.Length, ref flags, ref endPoint, out info);
-                    if (length < 0) {
-                        break;
-                    }
-
-                    // Instantiate message
-                    var message = new TMessage();
-                    message.Import(new ArraySegment<byte>(buffer, 0, length));
-
-                    // Raise received event
-                    OnMessageReceived(endPoint, message);
-                }
-            } catch (ObjectDisposedException) { }
+                Underlying.ReceiveMessageFromAsync(args);
+            } catch (ObjectDisposedException) { };
         }
 
         public void Bind(Int32 port) {
@@ -52,18 +48,13 @@ namespace InvertedTomato.Net.Feather {
         }
         public void Bind(EndPoint endPoint) {
             lock (Sync) {
-                if (ReceiveThread.IsAlive) {
-                    throw new InvalidOperationException("Already bound.");
-                }
-
                 // Bind underlying socket
                 Underlying.Bind(endPoint);
 
                 // Start receiving
-                ReceiveThread.Start();
+                StartReceive();
             }
         }
-
 
         public async Task SendTo(EndPoint target, TMessage message) {
             if (null == message) {
@@ -99,11 +90,6 @@ namespace InvertedTomato.Net.Feather {
             if (disposing) {
                 // Dispose managed state (managed objects)
                 Underlying.Dispose();
-                lock (Sync) {
-                    if (ReceiveThread.IsAlive) {
-                        ReceiveThread.Join();
-                    }
-                }
             }
         }
 
