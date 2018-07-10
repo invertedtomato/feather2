@@ -4,8 +4,7 @@ using System.Text;
 
 namespace InvertedTomato.Net.Feather
 {
-    class FeatherTcpClient
-    {
+    public class FeatherTcpClient<TMessage> : IDisposable where TMessage : IImportableMessage, IExportableMessage, new() {
 
         //public event Action<EndPoint> OnClientConnected;
         //public event Action<EndPoint, DisconnectionType> OnClientDisconnected;

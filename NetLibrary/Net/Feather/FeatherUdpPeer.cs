@@ -43,7 +43,7 @@ namespace InvertedTomato.Net.Feather {
                 Underlying.Bind(localEndPoint);
 
                 // Start receiving
-                StartReceive();
+                Receive();
             }
         }
 
@@ -103,7 +103,7 @@ namespace InvertedTomato.Net.Feather {
 
 
 
-        private void StartReceive() {
+        private void Receive() {
             var args = new SocketAsyncEventArgs();
             args.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
             args.SocketFlags = SocketFlags.None;
@@ -116,7 +116,7 @@ namespace InvertedTomato.Net.Feather {
                 // Raise received event
                 OnMessageReceived(e.RemoteEndPoint, message);
 
-                StartReceive();
+                Receive();
             };
 
             try {
