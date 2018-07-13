@@ -14,6 +14,8 @@ namespace InvertedTomato.Net.Feather {
         private readonly Object Sync = new Object();
 
         public bool IsDisposed { get; private set; }
+        public bool NoDelay { get { return Underlying.NoDelay; } set { Underlying.NoDelay = value; } }
+
         public event Action<TMessage> OnMessageReceived;
         private event Action OnDisconnected;
 

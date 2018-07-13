@@ -16,6 +16,7 @@ namespace InvertedTomato.Net.Feather {
         public event Action<EndPoint> OnClientConnected;
         public event Action<EndPoint, DisconnectionType> OnClientDisconnected;
 
+        public bool NoDelay { get { return Underlying.NoDelay; } set { Underlying.NoDelay = value; } }
         public bool IsDisposed { get; private set; }
 
         public void Listen(Int32 port) {
@@ -30,7 +31,18 @@ namespace InvertedTomato.Net.Feather {
             }
         }
         public void Disconnect(EndPoint address) {
-            throw new NotImplementedException();
+            if (null == address) {
+                throw new ArgumentNullException(nameof(address));
+            }
+
+            if(!Clients.TryRemove(address, out var client)) {
+                throw new KeyNotFoundException();
+            }
+
+            try {
+                client.Socket.Shutdown(SocketShutdown.Both);
+            } catch (SocketException) { };
+            client.Socket.Dispose();
         }
 
 
@@ -49,9 +61,15 @@ namespace InvertedTomato.Net.Feather {
 
             if (disposing) {
                 // Dispose managed state (managed objects)
+                try {
+                    Underlying.Shutdown(SocketShutdown.Both);
+                } catch (SocketException) { }
                 Underlying.Dispose();
 
                 foreach(var item in Clients) {
+                    try {
+                        item.Value.Socket.Shutdown(SocketShutdown.Both);
+                    } catch (SocketException) { }
                     item.Value.Socket.Dispose();
                 }
             }
@@ -65,14 +83,31 @@ namespace InvertedTomato.Net.Feather {
         private void Accept() {
             var args = new SocketAsyncEventArgs();
             args.Completed += (sender, e) => {
-                var client = Clients[e.RemoteEndPoint] = new Client() {
+                // Get endpoint
+                var endPoint = e.AcceptSocket.RemoteEndPoint;
+
+                // Facilitate shutdown
+                if (null == endPoint) {
+                    return;
+                }
+
+                // Create client record
+                var client = Clients[endPoint] = new Client() {
                     Socket = e.AcceptSocket,
                     LengthBuffer = new Byte[2],
                     LengthCount = 0
                 };
 
+                // Copy NoDelay
+                client.Socket.NoDelay = Underlying.NoDelay;
+
+                // Raise connected event
+                OnClientConnected(endPoint);
+
+                // Start receiving
                 ReceiveLength(client);
 
+                // Start accepting next request
                 Accept();
             };
             Underlying.AcceptAsync(args);
