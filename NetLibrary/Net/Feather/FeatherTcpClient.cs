@@ -1,45 +1,79 @@
-﻿using System;
+﻿using InvertedTomato.IO.Messages;
+using System;
 using System.Collections.Generic;
+using System.Net;
+using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 
-namespace InvertedTomato.Net.Feather
-{
+// TODO: Add async Send
+
+namespace InvertedTomato.Net.Feather {
     public class FeatherTcpClient<TMessage> : IDisposable where TMessage : IImportableMessage, IExportableMessage, new() {
+        private readonly Socket Underlying = new Socket(SocketType.Stream, ProtocolType.Tcp);
+        private readonly Object Sync = new Object();
 
-        //public event Action<EndPoint> OnClientConnected;
-        //public event Action<EndPoint, DisconnectionType> OnClientDisconnected;
+        public bool IsDisposed { get; private set; }
+        public event Action<TMessage> OnMessageReceived;
+        private event Action OnDisconnected;
 
-        public void Listen(UInt32 port) { // Tcp, Udp
-            throw new NotImplementedException();
+        public void Connect(string host, int port) {
+            Underlying.Connect(host, port);
         }
-        public void ListenSecure(UInt32 port, X509Certificate certificate) { // TcpSsl
-
+        public void Connect(EndPoint address) {
+            Underlying.Connect(address);
         }
-        public void Unlisten() { // Tcp, TcpSsl, Udp
-
+        public async Task ConnectAsync(string host, int port) {
+            await Underlying.ConnectAsync(host, port);
         }
-        public void Disconnect(EndPoint address) { // Tcp-server, TcpSsl-server
-            throw new NotImplementedException();
+        public async Task ConnectAsync(EndPoint address) {
+            await Underlying.ConnectAsync(address);
+        }
+        
+
+
+        public void Send(TMessage message) {
+            if (null == message) {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            // Extract payload from message
+            var payload = message.Export();
+
+            // Check the payload is not too large
+            if(payload.Count > UInt16.MaxValue) {
+                throw new ArgumentOutOfRangeException(nameof(message), "Message must encode to a payload of 65KB or less");
+            }
+
+            // Convert length to header
+            var lengthBytes = BitConverter.GetBytes((UInt16)payload.Count);
+
+            lock (Sync) {
+                // Send length header, followed by payload
+                Underlying.Send(lengthBytes);
+                Underlying.Send(payload);
+            }
         }
 
+        protected virtual void Dispose(bool disposing) {
+            if (IsDisposed) {
+                return;
+            }
+            IsDisposed = true;
 
-        public void Connect(EndPoint address) { // Tcp
-            throw new NotImplementedException();
+            if (disposing) {
+                // Dispose managed state (managed objects)
+                try {
+
+                    Underlying.Shutdown(SocketShutdown.Both);
+                } catch (SocketException) { }
+                
+                Underlying.Dispose();
+            }
         }
-        public void ConnectSecure(EndPoint address) { // TcpSsl
 
-        }
-        public void Disconnect() { // Tcp-client, TcpSsl-client
-
-        }
-
-
-        public void SendTo(? address, TMessage msg) { // Tcp, TcpSsl, Udp
-            throw new NotImplementedException();
-        }
-
-        public void Send(TMessage msg) { // Tcp-client, TcpSsl-client
-            throw new NotImplementedException();
+        public void Dispose() {
+            Dispose(true);
         }
     }
 }

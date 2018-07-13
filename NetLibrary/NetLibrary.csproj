@@ -28,11 +28,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Net\Feather\DisconnectionType.cs" />
     <Compile Remove="Net\Feather\FeatherClient.cs" />
     <Compile Remove="Net\Feather\FeatherServer.cs" />
-    <Compile Remove="Net\Feather\FeatherTcpClient.cs" />
-    <Compile Remove="Net\Feather\FeatherTcpServer.cs" />
     <Compile Remove="Net\Feather\Options.cs" />
     <Compile Remove="Net\Feather\ZeroUDP.cs" />
     <Compile Remove="Net\Feather\ZeroUDPOptions.cs" />

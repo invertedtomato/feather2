@@ -39,5 +39,11 @@ namespace InvertedTomato.Net {
             target.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.KeepAlive, enabled);
             target.IOControl(IOControlCode.KeepAliveValues, input2, null);
         }
+
+        public static void Send(this Socket target, ArraySegment<byte> payload) {
+            target.Send(payload.Array, payload.Offset, payload.Count, SocketFlags.None);
+        }
+
+
     }
 }

@@ -13,17 +13,17 @@ namespace NetLibraryTests {
         private readonly Byte[] TestPayload1 = new byte[] { 1, 2, 3 };
         private readonly BinaryMessage TestMessage1 = new BinaryMessage(new byte[] { 1, 2, 3 });
 
-        private readonly Byte[] TestPayload2 = new byte[] { 4,5,6 };
-        private readonly BinaryMessage TestMessage2 = new BinaryMessage(new byte[] { 4,5,6 });
+        private readonly Byte[] TestPayload2 = new byte[] { 4, 5, 6 };
+        private readonly BinaryMessage TestMessage2 = new BinaryMessage(new byte[] { 4, 5, 6 });
 
         [Fact]
-        public async Task SendMessageAsync() {
+        public void SendMessageSync() {
             var socket = new Socket(SocketType.Dgram, ProtocolType.Udp);
-            socket.Bind(new IPEndPoint(IPAddress.Loopback, 12345));
+            socket.Bind(new IPEndPoint(IPAddress.Loopback, 12346));
 
             using (var peer = new FeatherUdpPeer<BinaryMessage>()) {
-                await peer.SendTo(new IPEndPoint(IPAddress.Loopback, 12345), TestMessage1);
-                await peer.SendTo(new IPEndPoint(IPAddress.Loopback, 12345), TestMessage2);
+                peer.SendTo(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage1);
+                peer.SendTo(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage2);
             }
 
             byte[] buf = new byte[100];
@@ -39,13 +39,13 @@ namespace NetLibraryTests {
         }
 
         [Fact]
-        public void SendMessageSync() {
+        public async Task SendMessageAsync() {
             var socket = new Socket(SocketType.Dgram, ProtocolType.Udp);
-            socket.Bind(new IPEndPoint(IPAddress.Loopback, 12346));
+            socket.Bind(new IPEndPoint(IPAddress.Loopback, 12345));
 
             using (var peer = new FeatherUdpPeer<BinaryMessage>()) {
-                peer.SendToSync(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage1);
-                peer.SendToSync(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage2);
+                await peer.SendToAsync(new IPEndPoint(IPAddress.Loopback, 12345), TestMessage1);
+                await peer.SendToAsync(new IPEndPoint(IPAddress.Loopback, 12345), TestMessage2);
             }
 
             byte[] buf = new byte[100];
@@ -70,7 +70,7 @@ namespace NetLibraryTests {
                     if (stage == 0) {
                         Assert.Equal(TestPayload1, message.Export().ToArray());
                         stage = 1;
-                    }else if (stage == 1) {
+                    } else if (stage == 1) {
                         Assert.Equal(TestPayload2, message.Export().ToArray());
                         stage = 2;
                         block.Set();
@@ -102,11 +102,11 @@ namespace NetLibraryTests {
             Assert.True(peer.IsDisposed);
 
             Assert.Throws<ObjectDisposedException>(() => {
-                peer.SendToSync(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage1);
+                peer.SendTo(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage1);
             });
 
             await Assert.ThrowsAsync<ObjectDisposedException>(async () => {
-                await peer.SendTo(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage1);
+                await peer.SendToAsync(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage1);
             });
         }
     }

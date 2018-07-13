@@ -53,7 +53,7 @@ namespace InvertedTomato.Net.Feather {
         /// <param name="remoteEndPoint"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        public async Task SendTo(EndPoint remoteEndPoint, TMessage message) {
+        public async Task SendToAsync(EndPoint remoteEndPoint, TMessage message) {
             if (null == remoteEndPoint) {
                 throw new ArgumentNullException(nameof(remoteEndPoint));
             }
@@ -73,7 +73,7 @@ namespace InvertedTomato.Net.Feather {
         /// </summary>
         /// <param name="target"></param>
         /// <param name="message"></param>
-        public void SendToSync(EndPoint target, TMessage message) {
+        public void SendTo(EndPoint target, TMessage message) {
             if (null == message) {
                 throw new ArgumentNullException(nameof(message));
             }

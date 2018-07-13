@@ -50,6 +50,10 @@ namespace InvertedTomato.Net.Feather {
             if (disposing) {
                 // Dispose managed state (managed objects)
                 Underlying.Dispose();
+
+                foreach(var item in Clients) {
+                    item.Value.Socket.Dispose();
+                }
             }
         }
 
@@ -112,7 +116,7 @@ namespace InvertedTomato.Net.Feather {
             args.SetBuffer(client.PayloadBuffer, client.PayloadCount, client.PayloadBuffer.Length - client.PayloadCount);
             args.Completed += (sender, e) => {
                 if (e.BytesTransferred < 0) {
-                    throw new Exception(); // TODO
+                    throw new Exception(); // TODO----------------------------------------- disconnection logic
                 }
 
                 // Update received count
