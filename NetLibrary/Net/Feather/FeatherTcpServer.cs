@@ -44,13 +44,36 @@ namespace InvertedTomato.Net.Feather {
             } catch (SocketException) { };
             client.Socket.Dispose();
         }
+        
+        public void SendTo(EndPoint address, TMessage message) {
+            if (null == address) {
+                throw new ArgumentNullException(nameof(address));
+            }
+            if (null == message) {
+                throw new ArgumentNullException(nameof(message));
+            }
 
+            // Get target client
+            if (!Clients.TryGetValue(address, out var client)) {
+                throw new KeyNotFoundException();
+            }
 
+            // Extract payload from message
+            var payload = message.Export();
 
+            // Check the payload is not too large
+            if (payload.Count > UInt16.MaxValue) {
+                throw new ArgumentOutOfRangeException(nameof(message), "Message must encode to a payload of 65KB or less");
+            }
 
+            // Convert length to header
+            var lengthBytes = BitConverter.GetBytes((UInt16)payload.Count);
 
-        public void SendTo(EndPoint address, TMessage msg) {
-            throw new NotImplementedException();
+            lock (Sync) {
+                // Send length header, followed by payload
+                client.Socket.Send(lengthBytes);
+                client.Socket.Send(payload);
+            }
         }
 
         protected virtual void Dispose(bool disposing) {

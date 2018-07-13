@@ -163,7 +163,7 @@ namespace NetLibraryTests {
             server.Dispose();
             Assert.True(server.IsDisposed);
 
-            Assert.Throws<ObjectDisposedException>(() => {
+            Assert.Throws<KeyNotFoundException>(() => {
                 server.SendTo(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage1);
             });
 
