@@ -266,7 +266,7 @@ namespace InvertedTomato.Net.Feather {
                 AcceptStart();
             } catch (ObjectDisposedException) { };
         }
-
+        
         private void ReceiveLengthStart(Client client) {
             try {
                 // Prepare arguments
