@@ -5,13 +5,10 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace InvertedTomato.Net.Feather {
-
-    // TODO: SendToAsync
-    // TODO: Possible stack overflow on sync receive
-
     public class FeatherTcpServer<TMessage> : IDisposable where TMessage : IImportableMessage, IExportableMessage, new() {
         private readonly Socket Underlying = new Socket(SocketType.Stream, ProtocolType.Tcp);
         private readonly ConcurrentDictionary<EndPoint, Client> Clients = new ConcurrentDictionary<EndPoint, Client>();
@@ -80,6 +77,56 @@ namespace InvertedTomato.Net.Feather {
                 client.Socket.Send(lengthBytes);
                 client.Socket.Send(payload);
             }
+        }
+        
+        public  Task SendToAsync(EndPoint address, TMessage message) {
+            if (null == address) {
+                throw new ArgumentNullException(nameof(address));
+            }
+            if (null == message) {
+                throw new ArgumentNullException(nameof(message));
+            }
+
+            // Get target client
+            if (!Clients.TryGetValue(address, out var client)) {
+                throw new KeyNotFoundException();
+            }
+            
+            // Extract payload from message
+            var payload = message.Export();
+
+            // Check the payload is not too large
+            if (payload.Count > UInt16.MaxValue) {
+                throw new ArgumentOutOfRangeException(nameof(message), "Message must encode to a payload of 65KB or less");
+            }
+
+            // Convert length to header
+            var lengthBytes = BitConverter.GetBytes((UInt16)payload.Count);
+
+            // Coallese into one buffer
+            var buffer = new byte[lengthBytes.Length + payload.Count];
+            Buffer.BlockCopy(lengthBytes, 0, buffer, 0, 2);
+            Buffer.BlockCopy(payload.Array, payload.Offset, buffer, 2, payload.Count);
+
+            // Run send async
+            return Task.Run(() => {
+                lock (Sync) {
+                    var block = new AutoResetEvent(false);
+
+                    // Prepare async args
+                    var args = new SocketAsyncEventArgs();
+                    args.SetBuffer(buffer, 0, buffer.Length);
+                    args.Completed += (sender, e) => {
+                        block.Set();
+                    };
+
+                    // Send async - keeping in mind that it may return syncronously
+                    var runningAsync = client.Socket.SendAsync(args);
+                    if (runningAsync) {
+                        block.WaitOne();
+                    }
+                }
+            });
         }
 
         protected virtual void Dispose(bool disposing) {

@@ -60,6 +60,44 @@ namespace NetLibraryTests {
         }
 
         [Fact]
+        public async void SendAsync() {
+            EndPoint remote = null;
+
+            using (var server = new FeatherTcpServer<BinaryMessage>()) {
+                server.Listen(12350);
+                server.OnClientConnected += (endPoint) => {
+                    remote = endPoint;
+                };
+
+                using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
+                    socket.NoDelay = true;
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12350));
+
+                    Thread.Sleep(10);
+                    Assert.NotNull(remote);
+                    await server.SendToAsync(remote, TestMessage1);
+                    await server.SendToAsync(remote, TestMessage2);
+                    Thread.Sleep(10);
+
+                    var buffer = new byte[TestWire1.Length];
+                    var pos = 0;
+                    while (pos < buffer.Length) {
+                        var len = socket.Receive(buffer, pos, TestWire1.Length - pos, SocketFlags.None);
+                        pos += len;
+                    }
+                    Assert.Equal(TestWire1, buffer);
+
+                    buffer = new byte[TestWire2.Length];
+                    pos = 0;
+                    while (pos < buffer.Length) {
+                        var len = socket.Receive(buffer, pos, TestWire2.Length - pos, SocketFlags.None);
+                        pos += len;
+                    }
+                    Assert.Equal(TestWire2, buffer);
+                }
+            }
+        }
+        [Fact]
         public void Disconnect() {
             var block = new AutoResetEvent(false);
             EndPoint remote = null;
