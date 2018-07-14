@@ -5,20 +5,20 @@ using System.IO;
 using System.Linq;
 
 namespace InvertedTomato.IO.Feather {
-    public class FeatherStream<TMessage> : IDisposable where TMessage : IImportableMessage, IExportableMessage, new() {
+    public class FeatherWriter<TMessage> : IDisposable where TMessage : IExportableMessage {
         /// <summary>
         /// If the file has been disposed.
         /// </summary>
         public Boolean IsDisposed { get; private set; }
 
-        protected  Stream Underlying;
-        protected  Boolean CascadeDispose;
+        protected Stream Underlying;
+        protected Boolean CascadeDispose;
         protected readonly Object Sync = new Object();
         protected readonly VLQCodec VLQ = new VLQCodec();
-        
-        public FeatherStream(Stream underlying) : this(underlying, false) { }
-        public FeatherStream(Stream underlying, Boolean cascadeDispose) {
-            if(null == underlying) {
+
+        public FeatherWriter(Stream underlying) : this(underlying, false) { }
+        public FeatherWriter(Stream underlying, Boolean cascadeDispose) {
+            if (null == underlying) {
                 throw new ArgumentNullException(nameof(underlying));
             }
 
@@ -26,35 +26,14 @@ namespace InvertedTomato.IO.Feather {
             Underlying = underlying;
             CascadeDispose = cascadeDispose;
         }
-        protected FeatherStream(Boolean cascadeDispose) {
+        protected FeatherWriter(Boolean cascadeDispose) {
             // Store
             CascadeDispose = cascadeDispose;
         }
-
-        public virtual TMessage Read() {
-            lock(Sync) {
-                if(IsDisposed) {
-                    throw new ObjectDisposedException(string.Empty);
-                }
-
-                // Read length
-                var length = VLQ.DecompressUnsigned(Underlying, 1).Single();
-
-                // Read payload
-                var payload = new Byte[length];
-                Underlying.Read(payload, 0, payload.Length);
-
-                // Create message
-                var message = default(TMessage);
-                message.Import(new ArraySegment<byte>(payload));
-
-                return message;
-            }
-        }
-
+        
         public virtual void Write(TMessage message) {
-            lock(Sync) {
-                if(IsDisposed) {
+            lock (Sync) {
+                if (IsDisposed) {
                     throw new ObjectDisposedException(string.Empty);
                 }
 
@@ -70,15 +49,15 @@ namespace InvertedTomato.IO.Feather {
         }
 
         protected virtual void Dispose(Boolean disposing) {
-            lock(Sync) {
-                if(IsDisposed) {
+            lock (Sync) {
+                if (IsDisposed) {
                     return;
                 }
                 IsDisposed = true;
 
-                if(disposing) {
+                if (disposing) {
                     // Dispose managed state (managed objects).
-                    if(CascadeDispose) {
+                    if (CascadeDispose) {
                         Underlying?.Dispose();
                     }
                 }
@@ -94,9 +73,9 @@ namespace InvertedTomato.IO.Feather {
         /// <summary>
         /// Vanity method to open binary file.
         /// </summary>
-        public static FeatherStream<TMessage> OpenFile(String filePath, FileAccess access) {
+        public static FeatherWriter<TMessage> OpenFile(String filePath, FileAccess access) {
             var input = File.Open(filePath, FileMode.Open, access, FileShare.ReadWrite);
-            return new FeatherStream<TMessage>(input, true);
+            return new FeatherWriter<TMessage>(input, true);
         }
     }
 }
