@@ -36,12 +36,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="InvertedTomato.Messages" Version="1.2.1" />
     <PackageReference Include="System.Net.Security" Version="4.3.2" />
     <PackageReference Include="System.Net.Sockets" Version="4.3.0" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\CoreLibrary\CoreLibrary.csproj" />
   </ItemGroup>
 
 </Project>
