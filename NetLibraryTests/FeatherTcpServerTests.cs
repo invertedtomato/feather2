@@ -20,10 +20,8 @@ namespace NetLibraryTests {
 
         [Fact]
         public void Send() {
-            var stage = 0;
             var block = new AutoResetEvent(false);
             EndPoint remote = null;
-
 
             using (var server = new FeatherTcpServer<BinaryMessage>()) {
                 server.Listen(12350);
@@ -32,6 +30,7 @@ namespace NetLibraryTests {
                 };
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
+                    socket.NoDelay = true;
                     socket.Connect(new IPEndPoint(IPAddress.Loopback, 12350));
 
                     Thread.Sleep(10);
@@ -48,7 +47,6 @@ namespace NetLibraryTests {
                     }
                     Assert.Equal(TestWire1, buffer);
 
-
                     buffer = new byte[TestWire2.Length];
                     pos = 0;
                     while (pos < buffer.Length) {
@@ -56,12 +54,10 @@ namespace NetLibraryTests {
                         pos += len;
                     }
                     Assert.Equal(TestWire2, buffer);
+
+                    block.WaitOne(1000);
                 }
             }
-
-            block.WaitOne(1000);
-
-            Assert.Equal(2, stage);
         }
 
         [Fact]
@@ -89,7 +85,7 @@ namespace NetLibraryTests {
                             socket.Send(new byte[] { 0, 0 });
                         }
                     });
-                    
+
                     Assert.False(socket.Connected);
                 }
             }
