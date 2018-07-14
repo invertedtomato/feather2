@@ -18,9 +18,10 @@ namespace NetLibraryTests {
         private readonly Byte[] TestWire2 = new byte[] { 3, 0, 4, 5, 6 };
         private readonly BinaryMessage TestMessage2 = new BinaryMessage(new byte[] { 4, 5, 6 });
 
+        private readonly Byte[] BlankWire = new byte[] { 0, 0 };
+
         [Fact]
         public void Send() {
-            var block = new AutoResetEvent(false);
             EndPoint remote = null;
 
             using (var server = new FeatherTcpServer<BinaryMessage>()) {
@@ -54,8 +55,6 @@ namespace NetLibraryTests {
                         pos += len;
                     }
                     Assert.Equal(TestWire2, buffer);
-
-                    block.WaitOne(1000);
                 }
             }
         }
@@ -99,9 +98,11 @@ namespace NetLibraryTests {
             using (var server = new FeatherTcpServer<BinaryMessage>()) {
                 server.OnClientConnected += (endPoint) => {
                     Assert.Equal(0, stage++);
+                    Assert.NotNull(endPoint);
                 };
                 server.OnClientDisconnected += (endPoint, reason) => {
                     Assert.Equal(1, stage++);
+                    Assert.NotNull(endPoint);
                     block.Set();
                 };
                 server.Listen(12349);
@@ -148,8 +149,36 @@ namespace NetLibraryTests {
                 }
             }
 
-
             Assert.Equal(2, stage);
+        }
+
+        [Fact]
+        public void Receive_KeepAlive() {
+            var state = 0;
+            var block = new AutoResetEvent(false);
+
+            using (var server = new FeatherTcpServer<BinaryMessage>()) {
+                server.OnMessageReceived += (endpoint, message) => {
+                    throw new Exception("Shouldn't receive blank message");
+                };
+                server.OnKeepAliveReceived += (endpoint) => {
+                    Assert.NotNull(endpoint);
+                    state++;
+                    block.Set();
+                };
+                server.Listen(12351);
+
+                using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
+                    socket.NoDelay = true;
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12351));
+                    Assert.True(socket.Connected);
+                    socket.Send(BlankWire); // Blank message
+
+                    block.WaitOne(1000);
+                }
+            }
+
+            Assert.Equal(1, state);
         }
 
         [Fact]

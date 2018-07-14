@@ -7,12 +7,17 @@ using System.Net.Sockets;
 using System.Text;
 
 namespace InvertedTomato.Net.Feather {
+
+    // TODO: SendToAsync
+    // TODO: Possible stack overflow on sync receive
+
     public class FeatherTcpServer<TMessage> : IDisposable where TMessage : IImportableMessage, IExportableMessage, new() {
         private readonly Socket Underlying = new Socket(SocketType.Stream, ProtocolType.Tcp);
         private readonly ConcurrentDictionary<EndPoint, Client> Clients = new ConcurrentDictionary<EndPoint, Client>();
         private readonly Object Sync = new Object();
 
         public event Action<EndPoint, TMessage> OnMessageReceived;
+        public event Action<EndPoint> OnKeepAliveReceived;
         public event Action<EndPoint> OnClientConnected;
         public event Action<EndPoint, DisconnectionType> OnClientDisconnected;
 
@@ -103,6 +108,13 @@ namespace InvertedTomato.Net.Feather {
         }
 
 
+        private void Closed(EndPoint endPoint) {
+            if(Clients.TryRemove(endPoint, out var client)) {
+                client.Socket.Dispose();
+                OnClientDisconnected?.Invoke(endPoint, DisconnectionType.RemoteDisconnection);
+            }
+        }
+
         private void AcceptStart() {
             try {
                 // Prepare arguments
@@ -162,6 +174,12 @@ namespace InvertedTomato.Net.Feather {
         }
 
         private void ReceiveLenghtEnd(Client client, SocketAsyncEventArgs args) {
+            // Detect closed connection and handle
+            if(args.BytesTransferred <= 0) {
+                Closed(client.Socket.RemoteEndPoint);
+                return;
+            }
+
             // Update byte received count with what was just received
             client.LengthCount += args.BytesTransferred;
 
@@ -171,6 +189,14 @@ namespace InvertedTomato.Net.Feather {
             } else {
                 // Compute length
                 var length = BitConverter.ToUInt16(client.LengthBuffer, 0);
+
+                // Abort if keep-alive message
+                if (length == 0) {
+                    OnKeepAliveReceived?.Invoke(client.Socket.RemoteEndPoint);
+                    ReceiveLengthStart(client);
+                }
+
+                // Allocate payload buffer
                 client.PayloadBuffer = new byte[length];
 
                 // Reset state
@@ -199,8 +225,10 @@ namespace InvertedTomato.Net.Feather {
         }
 
         private void ReceivePayloadEnd(Client client, SocketAsyncEventArgs args) {
-            if (args.BytesTransferred < 0) {
-                throw new Exception(); // TODO----------------------------------------- disconnection logic
+            // Detect closed connection and handle
+            if (args.BytesTransferred <= 0) {
+                Closed(args.RemoteEndPoint);
+                return;
             }
 
             // Update received count
