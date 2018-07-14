@@ -29,6 +29,8 @@ namespace NetLibraryTests {
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
                     client.Connect("127.0.0.1", 12350);
+
+                    var socketa = socket.Accept();
                     client.Send(TestMessage1);
                     client.Send(TestMessage2);
                     Thread.Sleep(10);
@@ -36,7 +38,7 @@ namespace NetLibraryTests {
                     var buffer = new byte[TestWire1.Length];
                     var pos = 0;
                     while (pos < buffer.Length) {
-                        var len = socket.Receive(buffer, pos, TestWire1.Length - pos, SocketFlags.None);
+                        var len = socketa.Receive(buffer, pos, TestWire1.Length - pos, SocketFlags.None);
                         pos += len;
                     }
                     Assert.Equal(TestWire1, buffer);
@@ -44,7 +46,7 @@ namespace NetLibraryTests {
                     buffer = new byte[TestWire2.Length];
                     pos = 0;
                     while (pos < buffer.Length) {
-                        var len = socket.Receive(buffer, pos, TestWire2.Length - pos, SocketFlags.None);
+                        var len = socketa.Receive(buffer, pos, TestWire2.Length - pos, SocketFlags.None);
                         pos += len;
                     }
                     Assert.Equal(TestWire2, buffer);
@@ -61,6 +63,8 @@ namespace NetLibraryTests {
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
                     client.Connect("127.0.0.1", 12350);
+
+                    var socketa = socket.Accept();
                     await client.SendAsync(TestMessage1);
                     await client.SendAsync(TestMessage2);
                     Thread.Sleep(10);
@@ -68,7 +72,7 @@ namespace NetLibraryTests {
                     var buffer = new byte[TestWire1.Length];
                     var pos = 0;
                     while (pos < buffer.Length) {
-                        var len = socket.Receive(buffer, pos, TestWire1.Length - pos, SocketFlags.None);
+                        var len = socketa.Receive(buffer, pos, TestWire1.Length - pos, SocketFlags.None);
                         pos += len;
                     }
                     Assert.Equal(TestWire1, buffer);
@@ -76,7 +80,7 @@ namespace NetLibraryTests {
                     buffer = new byte[TestWire2.Length];
                     pos = 0;
                     while (pos < buffer.Length) {
-                        var len = socket.Receive(buffer, pos, TestWire2.Length - pos, SocketFlags.None);
+                        var len = socketa.Receive(buffer, pos, TestWire2.Length - pos, SocketFlags.None);
                         pos += len;
                     }
                     Assert.Equal(TestWire2, buffer);
@@ -93,13 +97,16 @@ namespace NetLibraryTests {
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
                     client.Connect("127.0.0.1", 12355);
+
+                    var socketa = socket.Accept();
+                    Assert.True(socketa.Connected);
                     client.Poke();
                     Thread.Sleep(10);
 
                     var buffer = new byte[BlankWire.Length];
                     var pos = 0;
                     while (pos < buffer.Length) {
-                        var len = socket.Receive(buffer, pos, BlankWire.Length - pos, SocketFlags.None);
+                        var len = socketa.Receive(buffer, pos, BlankWire.Length - pos, SocketFlags.None);
                         pos += len;
                     }
                     Assert.Equal(BlankWire, buffer);
@@ -123,10 +130,11 @@ namespace NetLibraryTests {
                         block.Set();
                     };
                     client.Connect("127.0.0.1", 12356);
+                    var socketa = socket.Accept();
 
                     Thread.Sleep(10);
-                    socket.Shutdown(SocketShutdown.Both);
-                    socket.Dispose();
+                    socketa.Shutdown(SocketShutdown.Both);
+                    socketa.Dispose();
 
                     block.WaitOne(1000);
                     Assert.Equal(1, stage);
@@ -158,11 +166,11 @@ namespace NetLibraryTests {
                         }
                     };
                     client.Connect("127.0.0.1", 12357);
-
-                    Assert.True(socket.Connected);
-                    socket.Send(TestWire1);
+                    var socketa = socket.Accept();
+                    Assert.True(socketa.Connected);
+                    socketa.Send(TestWire1);
                     Thread.Sleep(10);
-                    socket.Send(TestWire2);
+                    socketa.Send(TestWire2);
 
                     block.WaitOne(1000);
                 }
@@ -190,9 +198,10 @@ namespace NetLibraryTests {
                         block.Set();
                     };
                     client.Connect("127.0.0.1", 12358);
+                    var socketa = socket.Accept();
 
-                    Assert.True(socket.Connected);
-                    socket.Send(BlankWire); // Blank message
+                    Assert.True(socketa.Connected);
+                    socketa.Send(BlankWire); // Blank message
 
                     block.WaitOne(1000);
 
