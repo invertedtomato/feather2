@@ -27,7 +27,7 @@ namespace InvertedTomato.Net.Feather {
                 Underlying.Bind(localEndPoint);
                 Underlying.Listen(100);
 
-                Accept();
+                AcceptStart();
             }
         }
         public void Disconnect(EndPoint address) {
@@ -35,7 +35,7 @@ namespace InvertedTomato.Net.Feather {
                 throw new ArgumentNullException(nameof(address));
             }
 
-            if(!Clients.TryRemove(address, out var client)) {
+            if (!Clients.TryRemove(address, out var client)) {
                 throw new KeyNotFoundException();
             }
 
@@ -44,7 +44,7 @@ namespace InvertedTomato.Net.Feather {
             } catch (SocketException) { };
             client.Socket.Dispose();
         }
-        
+
         public void SendTo(EndPoint address, TMessage message) {
             if (null == address) {
                 throw new ArgumentNullException(nameof(address));
@@ -89,7 +89,7 @@ namespace InvertedTomato.Net.Feather {
                 } catch (SocketException) { }
                 Underlying.Dispose();
 
-                foreach(var item in Clients) {
+                foreach (var item in Clients) {
                     try {
                         item.Value.Socket.Shutdown(SocketShutdown.Both);
                     } catch (SocketException) { }
@@ -103,100 +103,124 @@ namespace InvertedTomato.Net.Feather {
         }
 
 
-        private void Accept() {
-            var args = new SocketAsyncEventArgs();
-            args.Completed += (sender, e) => {
-                // Get endpoint
-                var endPoint = e.AcceptSocket.RemoteEndPoint;
-
-                // Facilitate shutdown
-                if (null == endPoint) {
-                    return;
-                }
-
-                // Create client record
-                var client = Clients[endPoint] = new Client() {
-                    Socket = e.AcceptSocket,
-                    LengthBuffer = new Byte[2],
-                    LengthCount = 0
+        private void AcceptStart() {
+            try {
+                // Prepare arguments
+                var args = new SocketAsyncEventArgs();
+                args.Completed += (sender, e) => {
+                    AcceptEnd(e);
                 };
 
-                // Copy NoDelay
-                client.Socket.NoDelay = Underlying.NoDelay;
-
-                // Raise connected event
-                OnClientConnected(endPoint);
-
-                // Start receiving
-                ReceiveLength(client);
-
-                // Start accepting next request
-                Accept();
-            };
-            Underlying.AcceptAsync(args);
+                // Start accept - note that this will not call Completed and return false if it completes synchronously
+                if (!Underlying.AcceptAsync(args)) {
+                    AcceptEnd(args);
+                }
+            } catch (ObjectDisposedException) { }
         }
 
-        private void ReceiveLength(Client client) {
-            var args = new SocketAsyncEventArgs();
-            args.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            args.SocketFlags = SocketFlags.None;
-            args.SetBuffer(client.LengthBuffer, client.LengthCount, 2 - client.LengthCount);
-            args.Completed += (sender, e) => {
-                // Update byte received count with what was just received
-                client.LengthCount += e.BytesTransferred;
+        private void AcceptEnd(SocketAsyncEventArgs args) {
+            // Get endpoint
+            var endPoint = args.AcceptSocket.RemoteEndPoint;
 
-                if (client.LengthCount < 2) {
-                    // Not all length received - get more
-                    ReceiveLength(client);
-                } else {
-                    // Compute length
-                    var length = BitConverter.ToUInt16(client.LengthBuffer, 0);
-                    client.PayloadBuffer = new byte[length];
+            // Facilitate shutdown
+            if (null == endPoint) {
+                return;
+            }
 
-                    // Reset state
-                    client.LengthCount = 0;
-
-                    // Receive payload now
-                    ReceivePayload(client);
-                }
-
+            // Create client record
+            var client = Clients[endPoint] = new Client() {
+                Socket = args.AcceptSocket,
+                LengthBuffer = new Byte[2],
+                LengthCount = 0
             };
 
+            // Copy NoDelay
+            client.Socket.NoDelay = Underlying.NoDelay;
+
+            // Raise connected event
+            OnClientConnected?.Invoke(endPoint);
+
+            // Start receiving
+            ReceiveLengthStart(client);
+
+            // Start accepting next request
+            AcceptStart();
+        }
+
+        private void ReceiveLengthStart(Client client) {
             try {
-                client.Socket.ReceiveAsync(args);
+                var args = new SocketAsyncEventArgs();
+                args.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                args.SocketFlags = SocketFlags.None;
+                args.SetBuffer(client.LengthBuffer, client.LengthCount, 2 - client.LengthCount);
+                args.Completed += (sender, e) => { ReceiveLenghtEnd(client, e); };
+
+                if (!client.Socket.ReceiveAsync(args)) {
+                    ReceiveLenghtEnd(client, args);
+                }
             } catch (ObjectDisposedException) { };
         }
 
-        private void ReceivePayload(Client client) {
-            var args = new SocketAsyncEventArgs();
-            args.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            args.SocketFlags = SocketFlags.None;
-            args.SetBuffer(client.PayloadBuffer, client.PayloadCount, client.PayloadBuffer.Length - client.PayloadCount);
-            args.Completed += (sender, e) => {
-                if (e.BytesTransferred < 0) {
-                    throw new Exception(); // TODO----------------------------------------- disconnection logic
-                }
+        private void ReceiveLenghtEnd(Client client, SocketAsyncEventArgs args) {
+            // Update byte received count with what was just received
+            client.LengthCount += args.BytesTransferred;
 
-                // Update received count
-                client.PayloadCount += e.BytesTransferred;
+            if (client.LengthCount < 2) {
+                // Not all length received - get more
+                ReceiveLengthStart(client);
+            } else {
+                // Compute length
+                var length = BitConverter.ToUInt16(client.LengthBuffer, 0);
+                client.PayloadBuffer = new byte[length];
 
-                if (client.PayloadCount < client.PayloadBuffer.Length) {
-                    ReceivePayload(client);
-                } else {
-                    // Instantiate message
-                    var message = new TMessage();
-                    message.Import(new ArraySegment<byte>(client.PayloadBuffer, 0, client.PayloadBuffer.Length));
+                // Reset state
+                client.LengthCount = 0;
 
-                    // Raise received event
-                    OnMessageReceived(e.RemoteEndPoint, message);
+                // Receive payload now
+                ReceivePayloadStart(client);
+            }
+        }
 
-                    ReceiveLength(client);
-                }
-            };
 
+        private void ReceivePayloadStart(Client client) {
             try {
-                client.Socket.ReceiveAsync(args);
+                var args = new SocketAsyncEventArgs();
+                args.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
+                args.SocketFlags = SocketFlags.None;
+                args.SetBuffer(client.PayloadBuffer, client.PayloadCount, client.PayloadBuffer.Length - client.PayloadCount);
+                args.Completed += (sender, e) => {
+                    ReceivePayloadEnd(client, e);
+                };
+
+                if (!client.Socket.ReceiveAsync(args)) {
+                    ReceivePayloadEnd(client, args);
+                }
             } catch (ObjectDisposedException) { };
+        }
+
+        private void ReceivePayloadEnd(Client client, SocketAsyncEventArgs args) {
+            if (args.BytesTransferred < 0) {
+                throw new Exception(); // TODO----------------------------------------- disconnection logic
+            }
+
+            // Update received count
+            client.PayloadCount += args.BytesTransferred;
+
+            if (client.PayloadCount < client.PayloadBuffer.Length) {
+                ReceivePayloadStart(client);
+            } else {
+                // Instantiate message
+                var message = new TMessage();
+                message.Import(new ArraySegment<byte>(client.PayloadBuffer, 0, client.PayloadBuffer.Length));
+                
+                // Reset state
+                client.PayloadCount = 0;
+
+                // Raise received event
+                OnMessageReceived?.Invoke(args.RemoteEndPoint, message);
+
+                ReceiveLengthStart(client);
+            }
         }
     }
 

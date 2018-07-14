@@ -141,15 +141,17 @@ namespace NetLibraryTests {
                 server.Listen(12348);
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
+                    socket.NoDelay = true;
                     socket.Connect(new IPEndPoint(IPAddress.Loopback, 12348));
-
+                    Assert.True(socket.Connected);
                     socket.Send(TestWire1);
                     Thread.Sleep(10);
                     socket.Send(TestWire2);
+
+                    block.WaitOne(1000);
                 }
             }
 
-            block.WaitOne(1000);
 
             Assert.Equal(2, stage);
         }
