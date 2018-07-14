@@ -19,12 +19,28 @@ namespace InvertedTomato.Net.Feather {
         public event Action<EndPoint> OnClientConnected;
         public event Action<EndPoint, DisconnectionType> OnClientDisconnected;
 
+        /// <summary>
+        /// Disable the Nagle algorithm so that packets are sent immediately. This sacrafices bandwidth savings for speed.
+        /// </summary>
         public bool NoDelay { get { return Underlying.NoDelay; } set { Underlying.NoDelay = value; } }
+
+        /// <summary>
+        /// Is it disposed?
+        /// </summary>
         public bool IsDisposed { get; private set; }
 
+        /// <summary>
+        /// Listen on a specified TCP port.
+        /// </summary>
+        /// <param name="port"></param>
         public void Listen(Int32 port) {
             Listen(new IPEndPoint(IPAddress.Any, port));
         }
+
+        /// <summary>
+        /// Listen on a specified local TCP endpoint.
+        /// </summary>
+        /// <param name="localEndPoint"></param>
         public void Listen(IPEndPoint localEndPoint) {
             lock (Sync) {
                 Underlying.Bind(localEndPoint);
@@ -33,13 +49,18 @@ namespace InvertedTomato.Net.Feather {
                 AcceptStart();
             }
         }
-        public void Disconnect(EndPoint address) {
-            if (null == address) {
-                throw new ArgumentNullException(nameof(address));
+
+        /// <summary>
+        /// Disconnect a remote endpoint. If endpoint is not connected no action is taken.
+        /// </summary>
+        /// <param name="remoteEndPoint"></param>
+        public void Disconnect(EndPoint remoteEndPoint) {
+            if (null == remoteEndPoint) {
+                throw new ArgumentNullException(nameof(remoteEndPoint));
             }
 
-            if (!Clients.TryRemove(address, out var client)) {
-                throw new KeyNotFoundException();
+            if (!Clients.TryRemove(remoteEndPoint, out var client)) {
+                return;
             }
 
             try {
@@ -48,17 +69,22 @@ namespace InvertedTomato.Net.Feather {
             client.Socket.Dispose();
         }
 
-        public void SendTo(EndPoint address, TMessage message) {
-            if (null == address) {
-                throw new ArgumentNullException(nameof(address));
+        /// <summary>
+        /// Send a message to a connected remote end point. No action is taken if the endpoint is not connected.
+        /// </summary>
+        /// <param name="remoteEndPoint"></param>
+        /// <param name="message"></param>
+        public void SendTo(EndPoint remoteEndPoint, TMessage message) {
+            if (null == remoteEndPoint) {
+                throw new ArgumentNullException(nameof(remoteEndPoint));
             }
             if (null == message) {
                 throw new ArgumentNullException(nameof(message));
             }
 
             // Get target client
-            if (!Clients.TryGetValue(address, out var client)) {
-                throw new KeyNotFoundException();
+            if (!Clients.TryGetValue(remoteEndPoint, out var client)) {
+                return;
             }
 
             // Extract payload from message
@@ -78,20 +104,25 @@ namespace InvertedTomato.Net.Feather {
                 client.Socket.Send(payload);
             }
         }
-        
-        public  Task SendToAsync(EndPoint address, TMessage message) {
-            if (null == address) {
-                throw new ArgumentNullException(nameof(address));
+
+        /// <summary>
+        /// Send a message to a connected remote end point. No action is taken if the endpoint is not connected.
+        /// </summary>
+        /// <param name="remoteEndPoint"></param>
+        /// <param name="message"></param>
+        public Task SendToAsync(EndPoint remoteEndPoint, TMessage message) {
+            if (null == remoteEndPoint) {
+                throw new ArgumentNullException(nameof(remoteEndPoint));
             }
             if (null == message) {
                 throw new ArgumentNullException(nameof(message));
             }
 
             // Get target client
-            if (!Clients.TryGetValue(address, out var client)) {
+            if (!Clients.TryGetValue(remoteEndPoint, out var client)) {
                 throw new KeyNotFoundException();
             }
-            
+
             // Extract payload from message
             var payload = message.Export();
 
@@ -129,6 +160,10 @@ namespace InvertedTomato.Net.Feather {
             });
         }
 
+        /// <summary>
+        /// Dispose.
+        /// </summary>
+        /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing) {
             if (IsDisposed) {
                 return;
@@ -145,12 +180,15 @@ namespace InvertedTomato.Net.Feather {
                 foreach (var item in Clients) {
                     try {
                         item.Value.Socket.Shutdown(SocketShutdown.Both);
-                    } catch (SocketException) { }
+                    } catch (Exception) { }
                     item.Value.Socket.Dispose();
                 }
             }
         }
 
+        /// <summary>
+        /// Dispose.
+        /// </summary>
         public void Dispose() {
             Dispose(true);
         }
@@ -177,32 +215,35 @@ namespace InvertedTomato.Net.Feather {
         }
 
         private void AcceptEnd(SocketAsyncEventArgs args) {
-            // Get endpoint
-            var endPoint = args.AcceptSocket.RemoteEndPoint;
+            try {
+                // Get endpoint
+                var endPoint = args.AcceptSocket.RemoteEndPoint;
 
-            // Facilitate shutdown
-            if (null == endPoint) {
-                return;
-            }
+                // Facilitate shutdown
+                if (null == endPoint) {
+                    return;
+                }
 
-            // Create client record
-            var client = Clients[endPoint] = new Client() {
-                Socket = args.AcceptSocket,
-                LengthBuffer = new Byte[2],
-                LengthCount = 0
-            };
+                // Create client record
+                var client = Clients[endPoint] = new Client() {
+                    RemoteEndPoint = endPoint,
+                    Socket = args.AcceptSocket,
+                    LengthBuffer = new Byte[2],
+                    LengthCount = 0
+                };
 
-            // Copy NoDelay
-            client.Socket.NoDelay = Underlying.NoDelay;
+                // Copy NoDelay
+                client.Socket.NoDelay = Underlying.NoDelay;
 
-            // Raise connected event
-            OnClientConnected?.Invoke(endPoint);
+                // Raise connected event
+                OnClientConnected?.Invoke(endPoint);
 
-            // Start receiving
-            ReceiveLengthStart(client);
+                // Start receiving
+                ReceiveLengthStart(client);
 
-            // Start accepting next request
-            AcceptStart();
+                // Start accepting next request
+                AcceptStart();
+            } catch (ObjectDisposedException) { };
         }
 
         private void ReceiveLengthStart(Client client) {
@@ -220,39 +261,41 @@ namespace InvertedTomato.Net.Feather {
         }
 
         private void ReceiveLenghtEnd(Client client, SocketAsyncEventArgs args) {
-            // Detect closed connection and handle
-            if (args.BytesTransferred <= 0) {
-                Closed(client.Socket.RemoteEndPoint);
-                return;
-            }
-
-            // Update byte received count with what was just received
-            client.LengthCount += args.BytesTransferred;
-
-            if (client.LengthCount < 2) {
-                // Not all length received - get more
-                ReceiveLengthStart(client);
-            } else {
-                // Compute length
-                var length = BitConverter.ToUInt16(client.LengthBuffer, 0);
-
-                // Abort if keep-alive message
-                if (length == 0) {
-                    OnKeepAliveReceived?.Invoke(client.Socket.RemoteEndPoint);
-                    ReceiveLengthStart(client);
+            try {
+                // Detect closed connection and handle
+                if (args.BytesTransferred <= 0) {
+                    Closed(client.RemoteEndPoint);
+                    return;
                 }
 
-                // Allocate payload buffer
-                client.PayloadBuffer = new byte[length];
+                // Update byte received count with what was just received
+                client.LengthCount += args.BytesTransferred;
 
-                // Reset state
-                client.LengthCount = 0;
+                if (client.LengthCount < 2) {
+                    // Not all length received - get more
+                    ReceiveLengthStart(client);
+                } else {
+                    // Compute length
+                    var length = BitConverter.ToUInt16(client.LengthBuffer, 0);
 
-                // Receive payload now
-                ReceivePayloadStart(client);
-            }
+                    // Abort if keep-alive message
+                    if (length == 0) {
+                        OnKeepAliveReceived?.Invoke(client.Socket.RemoteEndPoint);
+                        ReceiveLengthStart(client);
+                    }
+
+                    // Allocate payload buffer
+                    client.PayloadBuffer = new byte[length];
+
+                    // Reset state
+                    client.LengthCount = 0;
+
+                    // Receive payload now
+                    ReceivePayloadStart(client);
+                }
+            } catch (ObjectDisposedException) { };
         }
-        
+
         private void ReceivePayloadStart(Client client) {
             try {
                 // Prepare arguments
@@ -268,43 +311,48 @@ namespace InvertedTomato.Net.Feather {
         }
 
         private void ReceivePayloadEnd(Client client, SocketAsyncEventArgs args) {
-            // Detect closed connection and handle
-            if (args.BytesTransferred <= 0) {
-                Closed(args.RemoteEndPoint);
-                return;
-            }
+            try {
+                // Detect closed connection and handle
+                if (args.BytesTransferred <= 0) {
+                    Closed(client.RemoteEndPoint);
+                    return;
+                }
 
-            // Update received count
-            client.PayloadCount += args.BytesTransferred;
+                // Update received count
+                client.PayloadCount += args.BytesTransferred;
 
-            if (client.PayloadCount < client.PayloadBuffer.Length) {
-                // Not all payload received - get more
-                ReceivePayloadStart(client);
-            } else {
-                // Instantiate message
-                var message = new TMessage();
-                message.Import(new ArraySegment<byte>(client.PayloadBuffer, 0, client.PayloadBuffer.Length));
+                if (client.PayloadCount < client.PayloadBuffer.Length) {
+                    // Not all payload received - get more
+                    ReceivePayloadStart(client);
+                } else {
+                    // Instantiate message
+                    var message = new TMessage();
+                    message.Import(new ArraySegment<byte>(client.PayloadBuffer, 0, client.PayloadBuffer.Length));
 
-                // Reset state
-                client.PayloadCount = 0;
+                    // Reset state
+                    client.PayloadCount = 0;
 
-                // Raise received event
-                OnMessageReceived?.Invoke(args.RemoteEndPoint, message);
+                    // Raise received event
+                    OnMessageReceived?.Invoke(args.RemoteEndPoint, message);
 
-                // Restart receive process with next lenght header
-                ReceiveLengthStart(client);
-            }
+                    // Restart receive process with next lenght header
+                    ReceiveLengthStart(client);
+                }
+            } catch (ObjectDisposedException) { };
+        }
+
+        private struct Client {
+            public EndPoint RemoteEndPoint;
+            public Socket Socket;
+
+            public Byte[] LengthBuffer;
+            public Int32 LengthCount;
+
+            public Byte[] PayloadBuffer;
+            public Int32 PayloadCount;
+
         }
     }
 
-    class Client {
-        public Socket Socket;
 
-        public Byte[] LengthBuffer;
-        public Int32 LengthCount;
-
-        public Byte[] PayloadBuffer;
-        public Int32 PayloadCount;
-
-    }
 }

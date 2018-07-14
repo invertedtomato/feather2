@@ -68,7 +68,7 @@ namespace InvertedTomato.Net.Feather {
                 try {
 
                     Underlying.Shutdown(SocketShutdown.Both);
-                } catch (SocketException) { }
+                } catch (Exception) { }
                 
                 Underlying.Dispose();
             }

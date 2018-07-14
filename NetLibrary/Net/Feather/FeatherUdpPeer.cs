@@ -43,7 +43,7 @@ namespace InvertedTomato.Net.Feather {
                 Underlying.Bind(localEndPoint);
 
                 // Start receiving
-                Receive();
+                ReceiveStart();
             }
         }
 
@@ -84,7 +84,7 @@ namespace InvertedTomato.Net.Feather {
             // Send!
             Underlying.SendTo(payload.Array, payload.Offset, payload.Count, SocketFlags.None, target);
         }
-        
+
         protected virtual void Dispose(bool disposing) {
             if (IsDisposed) {
                 return;
@@ -103,25 +103,35 @@ namespace InvertedTomato.Net.Feather {
 
 
 
-        private void Receive() {
+        private void ReceiveStart() {
+            // Prepare arguments
             var args = new SocketAsyncEventArgs();
             args.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
             args.SocketFlags = SocketFlags.None;
             args.SetBuffer(new byte[ReceiveMaxMessageSize], 0, ReceiveMaxMessageSize);
             args.Completed += (sender, e) => {
-                // Instantiate message
-                var message = new TMessage();
-                message.Import(new ArraySegment<byte>(e.Buffer, 0, e.BytesTransferred));
-
-                // Raise received event
-                OnMessageReceived(e.RemoteEndPoint, message);
-
-                Receive();
+                ReceiveEnd(e);
             };
 
+            // Start receive
             try {
-                Underlying.ReceiveMessageFromAsync(args);
+                // Start receiving - note that this will not call Completed and return false if it completes synchronously
+                if (!Underlying.ReceiveMessageFromAsync(args)) {
+                    Task.Run(() => { ReceiveEnd(args); });
+                }
             } catch (ObjectDisposedException) { };
+        }
+
+        public void ReceiveEnd(SocketAsyncEventArgs args) {
+            // Instantiate message
+            var message = new TMessage();
+            message.Import(new ArraySegment<byte>(args.Buffer, 0, args.BytesTransferred));
+
+            // Raise received event
+            OnMessageReceived?.Invoke(args.RemoteEndPoint, message);
+
+            // Loop receiving again
+            ReceiveStart();
         }
     }
 }

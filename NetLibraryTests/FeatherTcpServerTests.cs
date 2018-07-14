@@ -227,12 +227,6 @@ namespace NetLibraryTests {
             Assert.False(server.IsDisposed);
             server.Dispose();
             Assert.True(server.IsDisposed);
-
-            Assert.Throws<KeyNotFoundException>(() => {
-                server.SendTo(new IPEndPoint(IPAddress.Loopback, 12346), TestMessage1);
-            });
-
-            // TODO SendToAsync
         }
     }
 }
