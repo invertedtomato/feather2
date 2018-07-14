@@ -25,10 +25,10 @@ namespace NetLibraryTests {
             EndPoint remote = null;
 
             using (var server = new FeatherTcpServer<BinaryMessage>()) {
-                server.Listen(12350);
                 server.OnClientConnected += (endPoint) => {
                     remote = endPoint;
                 };
+                server.Listen(12350);
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                     socket.NoDelay = true;

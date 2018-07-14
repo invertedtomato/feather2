@@ -6,8 +6,6 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 
-// TODO: Add async Send
-
 namespace InvertedTomato.Net.Feather {
     public class FeatherTcpClient<TMessage> : IDisposable where TMessage : IImportableMessage, IExportableMessage, new() {
         private readonly Socket Underlying = new Socket(SocketType.Stream, ProtocolType.Tcp);
@@ -17,7 +15,8 @@ namespace InvertedTomato.Net.Feather {
         public bool NoDelay { get { return Underlying.NoDelay; } set { Underlying.NoDelay = value; } }
 
         public event Action<TMessage> OnMessageReceived;
-        private event Action OnDisconnected;
+        public event Action OnPokeReceived;
+        public event Action<DisconnectionType> OnDisconnected;
 
         public void Connect(string host, int port) {
             Underlying.Connect(host, port);
@@ -31,7 +30,7 @@ namespace InvertedTomato.Net.Feather {
         public async Task ConnectAsync(EndPoint address) {
             await Underlying.ConnectAsync(address);
         }
-        
+
 
 
         public void Send(TMessage message) {
@@ -43,7 +42,7 @@ namespace InvertedTomato.Net.Feather {
             var payload = message.Export();
 
             // Check the payload is not too large
-            if(payload.Count > UInt16.MaxValue) {
+            if (payload.Count > UInt16.MaxValue) {
                 throw new ArgumentOutOfRangeException(nameof(message), "Message must encode to a payload of 65KB or less");
             }
 
@@ -57,6 +56,14 @@ namespace InvertedTomato.Net.Feather {
             }
         }
 
+        public async Task SendAsync(TMessage message) {
+            throw new NotImplementedException();
+        }
+
+        public void Poke() {
+            throw new NotImplementedException();
+        }
+
         protected virtual void Dispose(bool disposing) {
             if (IsDisposed) {
                 return;
@@ -66,10 +73,9 @@ namespace InvertedTomato.Net.Feather {
             if (disposing) {
                 // Dispose managed state (managed objects)
                 try {
-
                     Underlying.Shutdown(SocketShutdown.Both);
                 } catch (Exception) { }
-                
+
                 Underlying.Dispose();
             }
         }
