@@ -97,6 +97,38 @@ namespace NetLibraryTests {
                 }
             }
         }
+
+
+        [Fact]
+        public void Poke() {
+            EndPoint remote = null;
+
+            using (var server = new FeatherTcpServer<BinaryMessage>()) {
+                server.Listen(12352);
+                server.OnClientConnected += (endPoint) => {
+                    remote = endPoint;
+                };
+
+                using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
+                    socket.NoDelay = true;
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12352));
+
+                    Thread.Sleep(10);
+                    Assert.NotNull(remote);
+                    server.Poke(remote);
+                    Thread.Sleep(10);
+
+                    var buffer = new byte[BlankWire.Length];
+                    var pos = 0;
+                    while (pos < buffer.Length) {
+                        var len = socket.Receive(buffer, pos, BlankWire.Length - pos, SocketFlags.None);
+                        pos += len;
+                    }
+                    Assert.Equal(BlankWire, buffer);
+                }
+            }
+        }
+
         [Fact]
         public void Disconnect() {
             var block = new AutoResetEvent(false);
@@ -191,7 +223,7 @@ namespace NetLibraryTests {
         }
 
         [Fact]
-        public void Receive_KeepAlive() {
+        public void ReceivePoke() {
             var state = 0;
             var block = new AutoResetEvent(false);
 
@@ -199,7 +231,7 @@ namespace NetLibraryTests {
                 server.OnMessageReceived += (endpoint, message) => {
                     throw new Exception("Shouldn't receive blank message");
                 };
-                server.OnKeepAliveReceived += (endpoint) => {
+                server.OnPokeReceived += (endpoint) => {
                     Assert.NotNull(endpoint);
                     state++;
                     block.Set();

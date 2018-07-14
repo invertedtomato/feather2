@@ -15,7 +15,7 @@ namespace InvertedTomato.Net.Feather {
         private readonly Object Sync = new Object();
 
         public event Action<EndPoint, TMessage> OnMessageReceived;
-        public event Action<EndPoint> OnKeepAliveReceived;
+        public event Action<EndPoint> OnPokeReceived;
         public event Action<EndPoint> OnClientConnected;
         public event Action<EndPoint, DisconnectionType> OnClientDisconnected;
 
@@ -161,6 +161,27 @@ namespace InvertedTomato.Net.Feather {
         }
 
         /// <summary>
+        /// Send a blank message to confirm the remote endpoint is still alive. 
+        /// </summary>
+        /// <remarks>Failing to poke will mean that the remote might be gone, but we haven't yet realised. Sending a standard message has the same effect, though uses more data.</remarks>
+        /// <param name="remoteEndPoint"></param>
+        public void Poke(EndPoint remoteEndPoint) {
+            if (null == remoteEndPoint) {
+                throw new ArgumentNullException(nameof(remoteEndPoint));
+            }
+
+            // Get target client
+            if (!Clients.TryGetValue(remoteEndPoint, out var client)) {
+                return;
+            }
+
+            lock (Sync) {
+                // Send length header, followed by payload
+                client.Socket.Send(new byte[] { 0, 0 });
+            }
+        }
+
+        /// <summary>
         /// Dispose.
         /// </summary>
         /// <param name="disposing"></param>
@@ -280,7 +301,7 @@ namespace InvertedTomato.Net.Feather {
 
                     // Abort if keep-alive message
                     if (length == 0) {
-                        OnKeepAliveReceived?.Invoke(client.Socket.RemoteEndPoint);
+                        OnPokeReceived?.Invoke(client.Socket.RemoteEndPoint);
                         ReceiveLengthStart(client);
                     }
 
