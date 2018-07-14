@@ -30,6 +30,11 @@ namespace InvertedTomato.Net.Feather {
         public bool IsDisposed { get; private set; }
 
         /// <summary>
+        /// All remote endpoints currently connected.
+        /// </summary>
+        public IEnumerable<EndPoint> RemoteEndPoints { get { return Clients.Keys;  } }
+
+        /// <summary>
         /// Listen on a specified TCP port.
         /// </summary>
         /// <param name="port"></param>
