@@ -5,7 +5,6 @@ using System;
 namespace NetLibraryTcpServerSample {
     class Program {
         static void Main(string[] args) {
-            // TCP SERVER
             using (var server = new FeatherTcpServer<GenericMessage>()) {
                 // Watch for when clients connect
                 server.OnClientConnected += (endPoint) => {
