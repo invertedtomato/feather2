@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace InvertedTomato.Net.Feather {
 
@@ -109,7 +110,7 @@ namespace InvertedTomato.Net.Feather {
 
 
         private void Closed(EndPoint endPoint) {
-            if(Clients.TryRemove(endPoint, out var client)) {
+            if (Clients.TryRemove(endPoint, out var client)) {
                 client.Socket.Dispose();
                 OnClientDisconnected?.Invoke(endPoint, DisconnectionType.RemoteDisconnection);
             }
@@ -119,13 +120,11 @@ namespace InvertedTomato.Net.Feather {
             try {
                 // Prepare arguments
                 var args = new SocketAsyncEventArgs();
-                args.Completed += (sender, e) => {
-                    AcceptEnd(e);
-                };
+                args.Completed += (sender, e) => { AcceptEnd(e); };
 
                 // Start accept - note that this will not call Completed and return false if it completes synchronously
                 if (!Underlying.AcceptAsync(args)) {
-                    AcceptEnd(args);
+                    Task.Run(() => { AcceptEnd(args); });
                 }
             } catch (ObjectDisposedException) { }
         }
@@ -161,21 +160,21 @@ namespace InvertedTomato.Net.Feather {
 
         private void ReceiveLengthStart(Client client) {
             try {
+                // Prepare arguments
                 var args = new SocketAsyncEventArgs();
-                args.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                args.SocketFlags = SocketFlags.None;
                 args.SetBuffer(client.LengthBuffer, client.LengthCount, 2 - client.LengthCount);
                 args.Completed += (sender, e) => { ReceiveLenghtEnd(client, e); };
 
+                // Start receiving length - note that this will not call Completed and return false if it completes synchronously
                 if (!client.Socket.ReceiveAsync(args)) {
-                    ReceiveLenghtEnd(client, args);
+                    Task.Run(() => { ReceiveLenghtEnd(client, args); });
                 }
             } catch (ObjectDisposedException) { };
         }
 
         private void ReceiveLenghtEnd(Client client, SocketAsyncEventArgs args) {
             // Detect closed connection and handle
-            if(args.BytesTransferred <= 0) {
+            if (args.BytesTransferred <= 0) {
                 Closed(client.Socket.RemoteEndPoint);
                 return;
             }
@@ -206,20 +205,17 @@ namespace InvertedTomato.Net.Feather {
                 ReceivePayloadStart(client);
             }
         }
-
-
+        
         private void ReceivePayloadStart(Client client) {
             try {
+                // Prepare arguments
                 var args = new SocketAsyncEventArgs();
-                args.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0);
-                args.SocketFlags = SocketFlags.None;
                 args.SetBuffer(client.PayloadBuffer, client.PayloadCount, client.PayloadBuffer.Length - client.PayloadCount);
-                args.Completed += (sender, e) => {
-                    ReceivePayloadEnd(client, e);
-                };
+                args.Completed += (sender, e) => { ReceivePayloadEnd(client, e); };
 
+                // Start receiving payload - note that this will not call Completed and return false if it completes synchronously
                 if (!client.Socket.ReceiveAsync(args)) {
-                    ReceivePayloadEnd(client, args);
+                    Task.Run(() => { ReceivePayloadEnd(client, args); });
                 }
             } catch (ObjectDisposedException) { };
         }
@@ -235,18 +231,20 @@ namespace InvertedTomato.Net.Feather {
             client.PayloadCount += args.BytesTransferred;
 
             if (client.PayloadCount < client.PayloadBuffer.Length) {
+                // Not all payload received - get more
                 ReceivePayloadStart(client);
             } else {
                 // Instantiate message
                 var message = new TMessage();
                 message.Import(new ArraySegment<byte>(client.PayloadBuffer, 0, client.PayloadBuffer.Length));
-                
+
                 // Reset state
                 client.PayloadCount = 0;
 
                 // Raise received event
                 OnMessageReceived?.Invoke(args.RemoteEndPoint, message);
 
+                // Restart receive process with next lenght header
                 ReceiveLengthStart(client);
             }
         }
