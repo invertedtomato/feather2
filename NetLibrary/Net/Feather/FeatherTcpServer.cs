@@ -4,7 +4,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,6 +17,7 @@ namespace InvertedTomato.Net.Feather {
         private readonly Socket Underlying = new Socket(SocketType.Stream, ProtocolType.Tcp);
         private readonly ConcurrentDictionary<EndPoint, Client> Clients = new ConcurrentDictionary<EndPoint, Client>();
         private readonly Object Sync = new Object();
+        private X509Certificate Certificate = null;
 
         public event Action<EndPoint, TMessage> OnMessageReceived;
         private event Action<EndPoint> OnPokeReceived;
@@ -55,6 +58,34 @@ namespace InvertedTomato.Net.Feather {
 
                 AcceptStart();
             }
+        }
+
+        /// <summary>
+        /// Listen on a specified TCP port using SSL through the provided certificate.
+        /// </summary>
+        /// <param name="port"></param>
+        /// <param name="certificate"></param>
+        public void ListenSecure(Int32 port, X509Certificate certificate) {
+            if (null == certificate) {
+                throw new ArgumentNullException(nameof(certificate));
+            }
+
+            Certificate = certificate;
+            Listen(port);
+        }
+
+        /// <summary>
+        /// Listen os a specfied local TCP endpoint using SSL through the provided certificate.
+        /// </summary>
+        /// <param name="localEndPoint"></param>
+        /// <param name="certificate"></param>
+        public void ListenSecure(IPEndPoint localEndPoint, X509Certificate certificate) {
+            if (null == certificate) {
+                throw new ArgumentNullException(nameof(certificate));
+            }
+
+            Certificate = certificate;
+            Listen(localEndPoint);
         }
 
         /// <summary>
@@ -206,7 +237,7 @@ namespace InvertedTomato.Net.Feather {
             }
         }
 
-        private void AcceptStart() {
+        private async Task AcceptStart() {
             try {
                 // Prepare arguments
                 var args = new SocketAsyncEventArgs();
@@ -214,12 +245,12 @@ namespace InvertedTomato.Net.Feather {
 
                 // Start accept - note that this will not call Completed and return false if it completes synchronously
                 if (!Underlying.AcceptAsync(args)) {
-                    Task.Run(() => { AcceptEnd(args); });
+                    AcceptEnd(args);
                 }
             } catch (ObjectDisposedException) { }
         }
 
-        private void AcceptEnd(SocketAsyncEventArgs args) {
+        private async Task AcceptEnd(SocketAsyncEventArgs args) {
             try {
                 // Get endpoint and socket
                 var endPoint = args.AcceptSocket.RemoteEndPoint;
@@ -230,11 +261,19 @@ namespace InvertedTomato.Net.Feather {
                     return;
                 }
 
+                // If secure, add SslStream layer
+                var stream = (Stream)new NetworkStream(socket);
+                if (null != Certificate) {
+                    var secureStream = new SslStream(stream, false);
+                    await secureStream.AuthenticateAsServerAsync(Certificate);
+                    stream = secureStream;
+                }
+
                 // Create client record
                 var client = Clients[endPoint] = new Client() {
                     RemoteEndPoint = endPoint,
                     Socket = socket,
-                    Stream = new NetworkStream(socket),
+                    Stream = stream,
                     LengthBuffer = new Byte[2],
                     LengthCount = 0
                 };

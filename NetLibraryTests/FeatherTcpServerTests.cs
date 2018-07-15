@@ -4,8 +4,10 @@ using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace NetLibraryTests {
@@ -264,6 +266,63 @@ namespace NetLibraryTests {
             Assert.False(server.IsDisposed);
             server.Dispose();
             Assert.True(server.IsDisposed);
+        }
+
+        [Fact]
+        public async Task Secure() {
+            var state = 0;
+            var block = new AutoResetEvent(false);
+
+            var certificateBody = "-----BEGIN CERTIFICATE-----" +
+            "MIIDnTCCAoSgAwIBAgIBADANBgkqhkiG9w0BAQ0FADBoMQswCQYDVQQGEwJhdTET" +
+            "MBEGA1UECAwKUXVlZW5zbGFuZDEQMA4GA1UECgwHRmVhdGhlcjESMBAGA1UEAwwJ" +
+            "bG9jYWxob3N0MREwDwYDVQQHDAhCcmlzYmFuZTELMAkGA1UECwwCSVQwHhcNMTgw" +
+            "NzE1MDUwMzM3WhcNMjEwNDEwMDUwMzM3WjBoMQswCQYDVQQGEwJhdTETMBEGA1UE" +
+            "CAwKUXVlZW5zbGFuZDEQMA4GA1UECgwHRmVhdGhlcjESMBAGA1UEAwwJbG9jYWxo" +
+            "b3N0MREwDwYDVQQHDAhCcmlzYmFuZTELMAkGA1UECwwCSVQwggEjMA0GCSqGSIb3" +
+            "DQEBAQUAA4IBEAAwggELAoIBAgC6Bj4C/UNEOD18o7M8VUGbLLYQaSSabBREKE9D" +
+            "IAb9aZ4Tue9G3guQaX4l3frkm2MCVVqDst3U/suQQ1Q+kva+TOC5mM0Sqte9pF76" +
+            "/jCHieeH+7bwnqe07atys4M+3UgjDBxV8d0sXeBM9XTR2lV0e6awUr2101yLqMlG" +
+            "NGA+U8sRTPg9gnWyH2JYMkwy16nNR6AYrxXAi9XHBRYI++Dty+uLFYRF03yvC4+m" +
+            "4z7Lc/tfS1jECbAwexjQXKdAa9E2YVqXPNtgqvOz5rRMMbF8MclY+COAoPRJm25J" +
+            "AElT+vZZwrxIw9C34HbPKcXsZ7TjzrwTKMFSq0xi394lsnlVxQIDAQABo1AwTjAd" +
+            "BgNVHQ4EFgQUe/3r7fIVV44QtqhLmrX2ZNei51gwHwYDVR0jBBgwFoAUe/3r7fIV" +
+            "V44QtqhLmrX2ZNei51gwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQ0FAAOCAQIA" +
+            "MmZYCp2Jw/M5rXfmcKBbaxi73R9sExVOb4HMi0HjI9fKsaOqf+vWDklx4OlMLWWU" +
+            "Kwx/5TLl7J8tiABxtvc9OtuQdCbx0p42fdfjf1hxe+D0gcsLXoAvR4y7BZITcvMN" +
+            "6QOGsFCb0SKfkx/HagK9GwMYuVH3pxjwZJtvdWmq5EZuYuOtiEy3EIZzGCWf9oqP" +
+            "ZmtLcgi14/jgkTFznSb0RQcHZJQThh2MtY79/T3usejRdYldh/2XaEHmwhaLwAAU" +
+            "sC+edHHv4L9b40HJKF6qorMZgFyM13pk3lTl9pCxY7yEH/n8kQU1tbnG7nvGJB36" +
+            "m5QSsW3Pfvy4U42tHCXBFVo=" +
+            "-----END CERTIFICATE-----";
+
+            var certificate = new X509Certificate2(Encoding.UTF8.GetBytes(certificateBody));
+
+            using (var server = new FeatherTcpServer<BinaryMessage>()) {
+                server.OnMessageReceived += (endPoint, message) => {
+                    if (state == 0) {
+                        Assert.Equal(TestPayload1, message.Export().ToArray());
+                        state++;
+                    } else if (state == 1) {
+                        Assert.Equal(TestPayload2, message.Export().ToArray());
+                        state++;
+                        block.Set();
+                    } else {
+                        throw new Exception();
+                    }
+                };
+                server.ListenSecure(12360, certificate);
+
+                using (var client = new FeatherTcpClient<BinaryMessage>()) {
+                    await client.ConnectSecureAsync("localhost", 12360);
+                    await client.SendAsync(TestMessage1);
+                    await client.SendAsync(TestMessage2);
+
+                    block.WaitOne(1000);
+                }
+            }
+
+            Assert.Equal(2, state);
         }
     }
 }

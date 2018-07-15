@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -29,26 +30,39 @@ namespace InvertedTomato.Net.Feather {
         public event Action<DisconnectionType> OnDisconnected;
 
         public void Connect(string host, int port) {
+            // Connect
             Underlying.Connect(host, port);
             UnderlyingStream = new NetworkStream(Underlying, true);
-            ReceiveLength();
-        }
-        public void Connect(EndPoint address) {
-            Underlying.Connect(address);
-            UnderlyingStream = new NetworkStream(Underlying, true);
-            ReceiveLength();
-        }
-        public async Task ConnectAsync(string host, int port) {
-            await Underlying.ConnectAsync(host, port);
-            UnderlyingStream = new NetworkStream(Underlying, true);
-            ReceiveLength();
-        }
-        public async Task ConnectAsync(EndPoint address) {
-            await Underlying.ConnectAsync(address);
-            UnderlyingStream = new NetworkStream(Underlying, true);
+
+            // Seed receive process
             ReceiveLength();
         }
 
+        public async Task ConnectAsync(string host, int port) {
+            // Connect
+            await Underlying.ConnectAsync(host, port);
+            UnderlyingStream = new NetworkStream(Underlying, true);
+
+            // Seed receive process
+            ReceiveLength();
+        }
+
+        public async Task ConnectSecureAsync(string host, int port) {
+            await ConnectSecureAsync(host, port, host, null);
+        }
+
+        public async Task ConnectSecureAsync(string host, int port, string validateHost, RemoteCertificateValidationCallback remoteCertificateValidationCallback) {
+            // Connect
+            await Underlying.ConnectAsync(host, port);
+
+            // Create secure stream and authenticate
+            var secureStream = new SslStream(new NetworkStream(Underlying, true), false, remoteCertificateValidationCallback); // Wrap the network stream in a SslStream
+            await secureStream.AuthenticateAsClientAsync(validateHost);
+            UnderlyingStream = secureStream;
+
+            // Seed receive process
+            ReceiveLength();
+        }
 
 
         public void Send(TMessage message) {
