@@ -123,4 +123,4 @@ static void Main(string[] args) {
 ```
 
 ## Where do I get it from?
-You can find it on NuGet.
+You can [find it on NuGet](https://www.nuget.org/packages/InvertedTomato.Feather2.Net/).

@@ -5,13 +5,15 @@
     <AssemblyName>InvertedTomato.Feather2Net</AssemblyName>
     <RootNamespace>InvertedTomato</RootNamespace>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Description>An extremely fast and lightweight network messaging socket. Kinda like WCF, without the nonsense and scolding fast speeds. Great for applications communicating over a network when webAPI is too slow or inefficient.</Description>
+    <Description>Feather2 is extremely fast and lightweight network messaging system. It's kinda like WCF, without the nonsense and 
+with scolding fast speeds. It's great for applications communicating over a network when speed, efficentcy or the 
+one-way nature of traditional web APIs isn't a great fit.</Description>
     <PackageProjectUrl>https://github.com/invertedtomato/feather2</PackageProjectUrl>
     <RepositoryUrl>https://github.com/invertedtomato/feather2</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <Version>0.1.0</Version>
-    <AssemblyVersion>0.0.1.0</AssemblyVersion>
-    <FileVersion>0.0.1.0</FileVersion>
+    <Version>0.2.0</Version>
+    <AssemblyVersion>0.0.2.0</AssemblyVersion>
+    <FileVersion>0.0.2.0</FileVersion>
     <PackageId>InvertedTomato.Feather2.Net</PackageId>
     <Authors>InvertedTomato.Feather2.Net</Authors>
     <Product>InvertedTomato.Feather2.Net</Product>
