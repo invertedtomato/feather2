@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -10,12 +11,13 @@ using System.Threading.Tasks;
 
 namespace InvertedTomato.Net.Feather {
     public class FeatherTcpServer<TMessage> : IDisposable where TMessage : IImportableMessage, IExportableMessage, new() {
+        private static readonly Byte[] BlankPayload = new Byte[] { 0, 0 };
         private readonly Socket Underlying = new Socket(SocketType.Stream, ProtocolType.Tcp);
         private readonly ConcurrentDictionary<EndPoint, Client> Clients = new ConcurrentDictionary<EndPoint, Client>();
         private readonly Object Sync = new Object();
 
         public event Action<EndPoint, TMessage> OnMessageReceived;
-        public event Action<EndPoint> OnPokeReceived;
+        protected event Action<EndPoint> OnPokeReceived;
         public event Action<EndPoint> OnClientConnected;
         public event Action<EndPoint, DisconnectionType> OnClientDisconnected;
 
@@ -32,7 +34,7 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// All remote endpoints currently connected.
         /// </summary>
-        public IEnumerable<EndPoint> RemoteEndPoints { get { return Clients.Keys;  } }
+        public IEnumerable<EndPoint> RemoteEndPoints { get { return Clients.Keys; } }
 
         /// <summary>
         /// Listen on a specified TCP port.
@@ -71,7 +73,7 @@ namespace InvertedTomato.Net.Feather {
             try {
                 client.Socket.Shutdown(SocketShutdown.Both);
             } catch (SocketException) { };
-            client.Socket.Dispose();
+            client.Stream.Dispose();
         }
 
         /// <summary>
@@ -103,11 +105,9 @@ namespace InvertedTomato.Net.Feather {
             // Convert length to header
             var lengthBytes = BitConverter.GetBytes((UInt16)payload.Count);
 
-            lock (Sync) {
-                // Send length header, followed by payload
-                client.Socket.Send(lengthBytes);
-                client.Socket.Send(payload);
-            }
+            // Send length header, followed by payload
+            client.Stream.Write(lengthBytes);
+            client.Stream.Write(payload);
         }
 
         /// <summary>
@@ -115,7 +115,7 @@ namespace InvertedTomato.Net.Feather {
         /// </summary>
         /// <param name="remoteEndPoint"></param>
         /// <param name="message"></param>
-        public Task SendToAsync(EndPoint remoteEndPoint, TMessage message) {
+        public async Task SendToAsync(EndPoint remoteEndPoint, TMessage message) {
             if (null == remoteEndPoint) {
                 throw new ArgumentNullException(nameof(remoteEndPoint));
             }
@@ -125,7 +125,7 @@ namespace InvertedTomato.Net.Feather {
 
             // Get target client
             if (!Clients.TryGetValue(remoteEndPoint, out var client)) {
-                throw new KeyNotFoundException();
+                return;
             }
 
             // Extract payload from message
@@ -139,30 +139,9 @@ namespace InvertedTomato.Net.Feather {
             // Convert length to header
             var lengthBytes = BitConverter.GetBytes((UInt16)payload.Count);
 
-            // Coallese into one buffer
-            var buffer = new byte[lengthBytes.Length + payload.Count];
-            Buffer.BlockCopy(lengthBytes, 0, buffer, 0, 2);
-            Buffer.BlockCopy(payload.Array, payload.Offset, buffer, 2, payload.Count);
-
-            // Run send async
-            return Task.Run(() => {
-                lock (Sync) {
-                    var block = new AutoResetEvent(false);
-
-                    // Prepare async args
-                    var args = new SocketAsyncEventArgs();
-                    args.SetBuffer(buffer, 0, buffer.Length);
-                    args.Completed += (sender, e) => {
-                        block.Set();
-                    };
-
-                    // Send async - keeping in mind that it may return syncronously
-                    var runningAsync = client.Socket.SendAsync(args);
-                    if (runningAsync) {
-                        block.WaitOne();
-                    }
-                }
-            });
+            // Send length header, followed by payload
+            await client.Stream.WriteAsync(lengthBytes);
+            await client.Stream.WriteAsync(payload);
         }
 
         /// <summary>
@@ -170,7 +149,7 @@ namespace InvertedTomato.Net.Feather {
         /// </summary>
         /// <remarks>Failing to poke will mean that the remote might be gone, but we haven't yet realised. Sending a standard message has the same effect, though uses more data.</remarks>
         /// <param name="remoteEndPoint"></param>
-        public void Poke(EndPoint remoteEndPoint) {
+        protected void Poke(EndPoint remoteEndPoint) {
             if (null == remoteEndPoint) {
                 throw new ArgumentNullException(nameof(remoteEndPoint));
             }
@@ -180,10 +159,8 @@ namespace InvertedTomato.Net.Feather {
                 return;
             }
 
-            lock (Sync) {
-                // Send length header, followed by payload
-                client.Socket.Send(new byte[] { 0, 0 });
-            }
+            // Send length header, followed by payload
+            client.Stream.Write(BlankPayload);
         }
 
         /// <summary>
@@ -207,7 +184,7 @@ namespace InvertedTomato.Net.Feather {
                     try {
                         item.Value.Socket.Shutdown(SocketShutdown.Both);
                     } catch (Exception) { }
-                    item.Value.Socket.Dispose();
+                    item.Value.Stream.Dispose();
                 }
             }
         }
@@ -222,7 +199,7 @@ namespace InvertedTomato.Net.Feather {
 
         private void Closed(EndPoint endPoint) {
             if (Clients.TryRemove(endPoint, out var client)) {
-                client.Socket.Dispose();
+                client.Stream.Dispose();
                 OnClientDisconnected?.Invoke(endPoint, DisconnectionType.RemoteDisconnection);
             }
         }
@@ -242,8 +219,9 @@ namespace InvertedTomato.Net.Feather {
 
         private void AcceptEnd(SocketAsyncEventArgs args) {
             try {
-                // Get endpoint
+                // Get endpoint and socket
                 var endPoint = args.AcceptSocket.RemoteEndPoint;
+                var socket = args.AcceptSocket;
 
                 // Facilitate shutdown
                 if (null == endPoint) {
@@ -253,61 +231,51 @@ namespace InvertedTomato.Net.Feather {
                 // Create client record
                 var client = Clients[endPoint] = new Client() {
                     RemoteEndPoint = endPoint,
-                    Socket = args.AcceptSocket,
+                    Socket = socket,
+                    Stream = new NetworkStream(socket, true),
                     LengthBuffer = new Byte[2],
                     LengthCount = 0
                 };
 
                 // Copy NoDelay
-                client.Socket.NoDelay = Underlying.NoDelay;
+                socket.NoDelay = Underlying.NoDelay;
 
                 // Raise connected event
                 OnClientConnected?.Invoke(endPoint);
 
                 // Start receiving
-                ReceiveLengthStart(client);
+                ReceiveLength(client);
 
                 // Start accepting next request
                 AcceptStart();
             } catch (ObjectDisposedException) { };
         }
-        
-        private void ReceiveLengthStart(Client client) {
-            try {
-                // Prepare arguments
-                var args = new SocketAsyncEventArgs();
-                args.SetBuffer(client.LengthBuffer, client.LengthCount, 2 - client.LengthCount);
-                args.Completed += (sender, e) => { ReceiveLenghtEnd(client, e); };
 
-                // Start receiving length - note that this will not call Completed and return false if it completes synchronously
-                if (!client.Socket.ReceiveAsync(args)) {
-                    Task.Run(() => { ReceiveLenghtEnd(client, args); });
-                }
-            } catch (ObjectDisposedException) { };
-        }
-
-        private void ReceiveLenghtEnd(Client client, SocketAsyncEventArgs args) {
+        private async void ReceiveLength(Client client) {
             try {
+                // Start the read
+                var bytesTransfered = await client.Stream.ReadAsync(client.LengthBuffer, client.LengthCount, client.LengthBuffer.Length - client.LengthCount);
+
                 // Detect closed connection and handle
-                if (args.BytesTransferred <= 0) {
+                if (bytesTransfered <= 0) {
                     Closed(client.RemoteEndPoint);
                     return;
                 }
 
                 // Update byte received count with what was just received
-                client.LengthCount += args.BytesTransferred;
+                client.LengthCount += bytesTransfered;
 
                 if (client.LengthCount < 2) {
                     // Not all length received - get more
-                    ReceiveLengthStart(client);
+                    ReceiveLength(client);
                 } else {
                     // Compute length
                     var length = BitConverter.ToUInt16(client.LengthBuffer, 0);
 
                     // Abort if keep-alive message
                     if (length == 0) {
-                        OnPokeReceived?.Invoke(client.Socket.RemoteEndPoint);
-                        ReceiveLengthStart(client);
+                        OnPokeReceived?.Invoke(client.RemoteEndPoint);
+                        ReceiveLength(client);
                     }
 
                     // Allocate payload buffer
@@ -317,39 +285,28 @@ namespace InvertedTomato.Net.Feather {
                     client.LengthCount = 0;
 
                     // Receive payload now
-                    ReceivePayloadStart(client);
+                    ReceivePayload(client);
                 }
             } catch (ObjectDisposedException) { };
         }
 
-        private void ReceivePayloadStart(Client client) {
+        private async void ReceivePayload(Client client) {
             try {
-                // Prepare arguments
-                var args = new SocketAsyncEventArgs();
-                args.SetBuffer(client.PayloadBuffer, client.PayloadCount, client.PayloadBuffer.Length - client.PayloadCount);
-                args.Completed += (sender, e) => { ReceivePayloadEnd(client, e); };
+                // Start the read
+                var bytesTransfered = await client.Stream.ReadAsync(client.PayloadBuffer, client.PayloadCount, client.PayloadBuffer.Length - client.PayloadCount);
 
-                // Start receiving payload - note that this will not call Completed and return false if it completes synchronously
-                if (!client.Socket.ReceiveAsync(args)) {
-                    Task.Run(() => { ReceivePayloadEnd(client, args); });
-                }
-            } catch (ObjectDisposedException) { };
-        }
-
-        private void ReceivePayloadEnd(Client client, SocketAsyncEventArgs args) {
-            try {
                 // Detect closed connection and handle
-                if (args.BytesTransferred <= 0) {
+                if (bytesTransfered <= 0) {
                     Closed(client.RemoteEndPoint);
                     return;
                 }
 
                 // Update received count
-                client.PayloadCount += args.BytesTransferred;
+                client.PayloadCount += bytesTransfered;
 
                 if (client.PayloadCount < client.PayloadBuffer.Length) {
                     // Not all payload received - get more
-                    ReceivePayloadStart(client);
+                    ReceivePayload(client);
                 } else {
                     // Instantiate message
                     var message = new TMessage();
@@ -359,10 +316,10 @@ namespace InvertedTomato.Net.Feather {
                     client.PayloadCount = 0;
 
                     // Raise received event
-                    OnMessageReceived?.Invoke(args.RemoteEndPoint, message);
+                    OnMessageReceived?.Invoke(client.RemoteEndPoint, message);
 
                     // Restart receive process with next lenght header
-                    ReceiveLengthStart(client);
+                    ReceiveLength(client);
                 }
             } catch (ObjectDisposedException) { };
         }
@@ -370,6 +327,7 @@ namespace InvertedTomato.Net.Feather {
         private struct Client {
             public EndPoint RemoteEndPoint;
             public Socket Socket;
+            public Stream Stream;
 
             public Byte[] LengthBuffer;
             public Int32 LengthCount;

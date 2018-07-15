@@ -88,6 +88,7 @@ namespace NetLibraryTests {
             }
         }
 
+        /*
         [Fact]
         public void Poke() {
             using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
@@ -113,6 +114,7 @@ namespace NetLibraryTests {
                 }
             }
         }
+        */
 
         [Fact]
         public void ClientDisconnected() {
@@ -178,7 +180,7 @@ namespace NetLibraryTests {
 
             Assert.Equal(2, stage);
         }
-
+        /*
         [Fact]
         public void ReceivePoke() {
             var state = 0;
@@ -210,7 +212,7 @@ namespace NetLibraryTests {
                 Assert.Equal(1, state);
             }
         }
-
+        */
         [Fact]
         public void Dispose() {
             var client = new FeatherTcpClient<BinaryMessage>();

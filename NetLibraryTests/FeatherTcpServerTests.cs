@@ -98,7 +98,7 @@ namespace NetLibraryTests {
             }
         }
 
-
+        /*
         [Fact]
         public void Poke() {
             EndPoint remote = null;
@@ -128,6 +128,7 @@ namespace NetLibraryTests {
                 }
             }
         }
+        */
 
         [Fact]
         public void Disconnect() {
@@ -222,6 +223,7 @@ namespace NetLibraryTests {
             Assert.Equal(2, stage);
         }
 
+        /*
         [Fact]
         public void ReceivePoke() {
             var state = 0;
@@ -250,6 +252,7 @@ namespace NetLibraryTests {
 
             Assert.Equal(1, state);
         }
+        */
 
         [Fact]
         public void Dispose() {
