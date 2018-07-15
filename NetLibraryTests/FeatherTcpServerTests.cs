@@ -22,11 +22,13 @@ namespace NetLibraryTests {
 
         [Fact]
         public void Send() {
+            var block = new AutoResetEvent(false);
             EndPoint remote = null;
 
             using (var server = new FeatherTcpServer<BinaryMessage>()) {
                 server.OnClientConnected += (endPoint) => {
                     remote = endPoint;
+                    block.Set();
                 };
                 server.Listen(12350);
 
@@ -34,11 +36,10 @@ namespace NetLibraryTests {
                     socket.NoDelay = true;
                     socket.Connect(new IPEndPoint(IPAddress.Loopback, 12350));
 
-                    Thread.Sleep(10);
+                    block.WaitOne(1000);
                     Assert.NotNull(remote);
                     server.SendTo(remote, TestMessage1);
                     server.SendTo(remote, TestMessage2);
-                    Thread.Sleep(10);
 
                     var buffer = new byte[TestWire1.Length];
                     var pos = 0;
@@ -61,23 +62,24 @@ namespace NetLibraryTests {
 
         [Fact]
         public async void SendAsync() {
+            var block = new AutoResetEvent(false);
             EndPoint remote = null;
 
             using (var server = new FeatherTcpServer<BinaryMessage>()) {
                 server.Listen(12350);
                 server.OnClientConnected += (endPoint) => {
                     remote = endPoint;
+                    block.Set();
                 };
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                     socket.NoDelay = true;
                     socket.Connect(new IPEndPoint(IPAddress.Loopback, 12350));
 
-                    Thread.Sleep(10);
+                    block.WaitOne(1000);
                     Assert.NotNull(remote);
                     await server.SendToAsync(remote, TestMessage1);
                     await server.SendToAsync(remote, TestMessage2);
-                    Thread.Sleep(10);
 
                     var buffer = new byte[TestWire1.Length];
                     var pos = 0;

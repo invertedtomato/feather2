@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Xunit;
 
 namespace NetLibraryTests {
@@ -214,17 +215,35 @@ namespace NetLibraryTests {
         }
         */
         [Fact]
-        public void Dispose() {
-            var client = new FeatherTcpClient<BinaryMessage>();
-            Assert.False(client.IsDisposed);
-            client.Dispose();
-            Assert.True(client.IsDisposed);
+        public async Task Dispose() {
+            using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
+                socket.NoDelay = true;
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12359));
+                socket.Listen(1);
 
-            Assert.Throws<ObjectDisposedException>(() => {
+                var client = new FeatherTcpClient<BinaryMessage>();
+                client.Connect("127.0.0.1", 12359);
+                Assert.False(client.IsDisposed);
+                client.Dispose();
+                Assert.True(client.IsDisposed);
+
+                Assert.Throws<ObjectDisposedException>(() => {
+                    client.Send(TestMessage1);
+                });
+
+                await Assert.ThrowsAsync<ObjectDisposedException>(async () => {
+                    await client.SendAsync(TestMessage1);
+                });
+            }
+        }
+
+
+        [Fact]
+        public void Send_NotConnected() {
+            var client = new FeatherTcpClient<BinaryMessage>();
+            Assert.Throws<InvalidOperationException>(() => {
                 client.Send(TestMessage1);
             });
-
-            // TODO SendToAsync
         }
     }
 }

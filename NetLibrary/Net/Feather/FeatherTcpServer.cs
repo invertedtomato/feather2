@@ -17,7 +17,7 @@ namespace InvertedTomato.Net.Feather {
         private readonly Object Sync = new Object();
 
         public event Action<EndPoint, TMessage> OnMessageReceived;
-        protected event Action<EndPoint> OnPokeReceived;
+        private event Action<EndPoint> OnPokeReceived;
         public event Action<EndPoint> OnClientConnected;
         public event Action<EndPoint, DisconnectionType> OnClientDisconnected;
 
@@ -149,7 +149,7 @@ namespace InvertedTomato.Net.Feather {
         /// </summary>
         /// <remarks>Failing to poke will mean that the remote might be gone, but we haven't yet realised. Sending a standard message has the same effect, though uses more data.</remarks>
         /// <param name="remoteEndPoint"></param>
-        protected void Poke(EndPoint remoteEndPoint) {
+        private void Poke(EndPoint remoteEndPoint) {
             if (null == remoteEndPoint) {
                 throw new ArgumentNullException(nameof(remoteEndPoint));
             }
@@ -185,6 +185,7 @@ namespace InvertedTomato.Net.Feather {
                         item.Value.Socket.Shutdown(SocketShutdown.Both);
                     } catch (Exception) { }
                     item.Value.Stream.Dispose();
+                    item.Value.Socket.Dispose();
                 }
             }
         }
@@ -200,6 +201,7 @@ namespace InvertedTomato.Net.Feather {
         private void Closed(EndPoint endPoint) {
             if (Clients.TryRemove(endPoint, out var client)) {
                 client.Stream.Dispose();
+                client.Socket.Dispose();
                 OnClientDisconnected?.Invoke(endPoint, DisconnectionType.RemoteDisconnection);
             }
         }
@@ -232,7 +234,7 @@ namespace InvertedTomato.Net.Feather {
                 var client = Clients[endPoint] = new Client() {
                     RemoteEndPoint = endPoint,
                     Socket = socket,
-                    Stream = new NetworkStream(socket, true),
+                    Stream = new NetworkStream(socket),
                     LengthBuffer = new Byte[2],
                     LengthCount = 0
                 };
@@ -251,7 +253,7 @@ namespace InvertedTomato.Net.Feather {
             } catch (ObjectDisposedException) { };
         }
 
-        private async void ReceiveLength(Client client) {
+        private async Task ReceiveLength(Client client) {
             try {
                 // Start the read
                 var bytesTransfered = await client.Stream.ReadAsync(client.LengthBuffer, client.LengthCount, client.LengthBuffer.Length - client.LengthCount);
@@ -290,7 +292,7 @@ namespace InvertedTomato.Net.Feather {
             } catch (ObjectDisposedException) { };
         }
 
-        private async void ReceivePayload(Client client) {
+        private async Task ReceivePayload(Client client) {
             try {
                 // Start the read
                 var bytesTransfered = await client.Stream.ReadAsync(client.PayloadBuffer, client.PayloadCount, client.PayloadBuffer.Length - client.PayloadCount);
