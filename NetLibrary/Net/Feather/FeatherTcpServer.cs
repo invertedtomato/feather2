@@ -16,7 +16,7 @@ namespace InvertedTomato.Net.Feather {
         private static readonly Byte[] BlankPayload = new Byte[] { 0, 0 };
         private readonly Socket Underlying = new Socket(SocketType.Stream, ProtocolType.Tcp);
         private readonly ConcurrentDictionary<EndPoint, Client> Clients = new ConcurrentDictionary<EndPoint, Client>();
-        private readonly Object Sync = new Object();
+        //private readonly Object Sync = new Object();
         private X509Certificate Certificate = null;
 
         public event Action<EndPoint, TMessage> OnMessageReceived;
@@ -35,6 +35,11 @@ namespace InvertedTomato.Net.Feather {
         public bool IsDisposed { get; private set; }
 
         /// <summary>
+        /// Maximum number of inbound connections that will be queued pending acceptance.
+        /// </summary>
+        public Int32 MaxBackloggedConnections { get; set; } = 8;
+
+        /// <summary>
         /// All remote endpoints currently connected.
         /// </summary>
         public IEnumerable<EndPoint> RemoteEndPoints { get { return Clients.Keys; } }
@@ -43,7 +48,7 @@ namespace InvertedTomato.Net.Feather {
         /// Listen on a specified TCP port.
         /// </summary>
         /// <param name="port"></param>
-        public void Listen(Int32 port) {
+        public void Listen (Int32 port) {
             Listen(new IPEndPoint(IPAddress.Any, port));
         }
 
@@ -51,13 +56,13 @@ namespace InvertedTomato.Net.Feather {
         /// Listen on a specified local TCP endpoint.
         /// </summary>
         /// <param name="localEndPoint"></param>
-        public void Listen(IPEndPoint localEndPoint) {
-            lock (Sync) {
-                Underlying.Bind(localEndPoint);
-                Underlying.Listen(100);
+        public void Listen (IPEndPoint localEndPoint) {
+            // Bind port and start listening
+            Underlying.Bind(localEndPoint);
+            Underlying.Listen(MaxBackloggedConnections);
 
-                AcceptStart();
-            }
+            // Seed accept process
+            Task.Run((Action)AcceptStart);
         }
 
         /// <summary>
@@ -65,7 +70,7 @@ namespace InvertedTomato.Net.Feather {
         /// </summary>
         /// <param name="port"></param>
         /// <param name="certificate"></param>
-        public void ListenSecure(Int32 port, X509Certificate certificate) {
+        public void ListenSecure (Int32 port, X509Certificate certificate) {
             if (null == certificate) {
                 throw new ArgumentNullException(nameof(certificate));
             }
@@ -79,7 +84,7 @@ namespace InvertedTomato.Net.Feather {
         /// </summary>
         /// <param name="localEndPoint"></param>
         /// <param name="certificate"></param>
-        public void ListenSecure(IPEndPoint localEndPoint, X509Certificate certificate) {
+        public void ListenSecure (IPEndPoint localEndPoint, X509Certificate certificate) {
             if (null == certificate) {
                 throw new ArgumentNullException(nameof(certificate));
             }
@@ -92,7 +97,7 @@ namespace InvertedTomato.Net.Feather {
         /// Disconnect a remote endpoint. If endpoint is not connected no action is taken.
         /// </summary>
         /// <param name="remoteEndPoint"></param>
-        public void Disconnect(EndPoint remoteEndPoint) {
+        public void Disconnect (EndPoint remoteEndPoint) {
             if (null == remoteEndPoint) {
                 throw new ArgumentNullException(nameof(remoteEndPoint));
             }
@@ -112,41 +117,7 @@ namespace InvertedTomato.Net.Feather {
         /// </summary>
         /// <param name="remoteEndPoint"></param>
         /// <param name="message"></param>
-        public void SendTo(EndPoint remoteEndPoint, TMessage message) {
-            if (null == remoteEndPoint) {
-                throw new ArgumentNullException(nameof(remoteEndPoint));
-            }
-            if (null == message) {
-                throw new ArgumentNullException(nameof(message));
-            }
-
-            // Get target client
-            if (!Clients.TryGetValue(remoteEndPoint, out var client)) {
-                return;
-            }
-
-            // Extract payload from message
-            var payload = message.Export();
-
-            // Check the payload is not too large
-            if (payload.Count > UInt16.MaxValue) {
-                throw new ArgumentOutOfRangeException(nameof(message), "Message must encode to a payload of 65KB or less");
-            }
-
-            // Convert length to header
-            var lengthBytes = BitConverter.GetBytes((UInt16)payload.Count);
-
-            // Send length header, followed by payload
-            client.Stream.Write(lengthBytes);
-            client.Stream.Write(payload);
-        }
-
-        /// <summary>
-        /// Send a message to a connected remote end point. No action is taken if the endpoint is not connected.
-        /// </summary>
-        /// <param name="remoteEndPoint"></param>
-        /// <param name="message"></param>
-        public async Task SendToAsync(EndPoint remoteEndPoint, TMessage message) {
+        public async Task SendToAsync (EndPoint remoteEndPoint, TMessage message) {
             if (null == remoteEndPoint) {
                 throw new ArgumentNullException(nameof(remoteEndPoint));
             }
@@ -180,7 +151,7 @@ namespace InvertedTomato.Net.Feather {
         /// </summary>
         /// <remarks>Failing to poke will mean that the remote might be gone, but we haven't yet realised. Sending a standard message has the same effect, though uses more data.</remarks>
         /// <param name="remoteEndPoint"></param>
-        private void Poke(EndPoint remoteEndPoint) {
+        private void Poke (EndPoint remoteEndPoint) {
             if (null == remoteEndPoint) {
                 throw new ArgumentNullException(nameof(remoteEndPoint));
             }
@@ -198,7 +169,7 @@ namespace InvertedTomato.Net.Feather {
         /// Dispose.
         /// </summary>
         /// <param name="disposing"></param>
-        protected virtual void Dispose(bool disposing) {
+        protected virtual void Dispose (bool disposing) {
             if (IsDisposed) {
                 return;
             }
@@ -224,20 +195,23 @@ namespace InvertedTomato.Net.Feather {
         /// <summary>
         /// Dispose.
         /// </summary>
-        public void Dispose() {
+        public void Dispose () {
             Dispose(true);
         }
 
 
-        private void Closed(EndPoint endPoint) {
+        private void HandleRemoteDisconnect (EndPoint endPoint) {
             if (Clients.TryRemove(endPoint, out var client)) {
+                // Cleanup
                 client.Stream.Dispose();
                 client.Socket.Dispose();
+
+                // Fire event handler
                 OnClientDisconnected?.Invoke(endPoint, DisconnectionType.RemoteDisconnection);
             }
         }
 
-        private async Task AcceptStart() {
+        private void AcceptStart () {
             try {
                 // Prepare arguments
                 var args = new SocketAsyncEventArgs();
@@ -250,7 +224,7 @@ namespace InvertedTomato.Net.Feather {
             } catch (ObjectDisposedException) { }
         }
 
-        private async Task AcceptEnd(SocketAsyncEventArgs args) {
+        private async void AcceptEnd (SocketAsyncEventArgs args) {
             try {
                 // Get endpoint and socket
                 var endPoint = args.AcceptSocket.RemoteEndPoint;
@@ -292,14 +266,14 @@ namespace InvertedTomato.Net.Feather {
             } catch (ObjectDisposedException) { };
         }
 
-        private async Task ReceiveLength(Client client) {
+        private async void ReceiveLength (Client client) {
             try {
                 // Start the read
                 var bytesTransfered = await client.Stream.ReadAsync(client.LengthBuffer, client.LengthCount, client.LengthBuffer.Length - client.LengthCount);
 
                 // Detect closed connection and handle
                 if (bytesTransfered <= 0) {
-                    Closed(client.RemoteEndPoint);
+                    HandleRemoteDisconnect(client.RemoteEndPoint);
                     return;
                 }
 
@@ -328,17 +302,20 @@ namespace InvertedTomato.Net.Feather {
                     // Receive payload now
                     ReceivePayload(client);
                 }
-            } catch (ObjectDisposedException) { };
+            } catch (ObjectDisposedException) {
+            } catch (IOException) {
+                HandleRemoteDisconnect(client.RemoteEndPoint);
+            }
         }
 
-        private async Task ReceivePayload(Client client) {
+        private async void ReceivePayload (Client client) {
             try {
                 // Start the read
                 var bytesTransfered = await client.Stream.ReadAsync(client.PayloadBuffer, client.PayloadCount, client.PayloadBuffer.Length - client.PayloadCount);
 
                 // Detect closed connection and handle
                 if (bytesTransfered <= 0) {
-                    Closed(client.RemoteEndPoint);
+                    HandleRemoteDisconnect(client.RemoteEndPoint);
                     return;
                 }
 
@@ -362,7 +339,10 @@ namespace InvertedTomato.Net.Feather {
                     // Restart receive process with next lenght header
                     ReceiveLength(client);
                 }
-            } catch (ObjectDisposedException) { };
+            } catch (ObjectDisposedException) {
+            } catch (IOException) {
+                HandleRemoteDisconnect(client.RemoteEndPoint);
+            }
         }
 
         private struct Client {
@@ -375,9 +355,6 @@ namespace InvertedTomato.Net.Feather {
 
             public Byte[] PayloadBuffer;
             public Int32 PayloadCount;
-
         }
     }
-
-
 }

@@ -25,11 +25,11 @@ namespace NetLibraryTests {
         public void Send() {
             using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                 socket.NoDelay = true;
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12350));
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12000));
                 socket.Listen(1);
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
-                    client.Connect("127.0.0.1", 12350);
+                    client.Connect("127.0.0.1", 12000);
 
                     var socketa = socket.Accept();
                     client.Send(TestMessage1);
@@ -59,11 +59,11 @@ namespace NetLibraryTests {
         public async void SendAsync() {
             using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                 socket.NoDelay = true;
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12350));
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12001));
                 socket.Listen(1);
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
-                    client.Connect("127.0.0.1", 12350);
+                    client.Connect("127.0.0.1", 12001);
 
                     var socketa = socket.Accept();
                     await client.SendAsync(TestMessage1);
@@ -94,11 +94,11 @@ namespace NetLibraryTests {
         public void Poke() {
             using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                 socket.NoDelay = true;
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12355));
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12002));
                 socket.Listen(1);
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
-                    client.Connect("127.0.0.1", 12355);
+                    client.Connect("127.0.0.1", 12002);
 
                     var socketa = socket.Accept();
                     Assert.True(socketa.Connected);
@@ -124,7 +124,7 @@ namespace NetLibraryTests {
 
             using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                 socket.NoDelay = true;
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12356));
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12003));
                 socket.Listen(1);
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
@@ -132,7 +132,7 @@ namespace NetLibraryTests {
                         Assert.Equal(0, stage++);
                         block.Set();
                     };
-                    client.Connect("127.0.0.1", 12356);
+                    client.Connect("127.0.0.1", 12003);
                     var socketa = socket.Accept();
 
                     Thread.Sleep(10);
@@ -152,7 +152,7 @@ namespace NetLibraryTests {
 
             using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                 socket.NoDelay = true;
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12357));
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12004));
                 socket.Listen(1);
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
@@ -168,7 +168,7 @@ namespace NetLibraryTests {
                             Assert.False(true);
                         }
                     };
-                    client.Connect("127.0.0.1", 12357);
+                    client.Connect("127.0.0.1", 12004);
                     var socketa = socket.Accept();
                     Assert.True(socketa.Connected);
                     socketa.Send(TestWire1);
@@ -189,7 +189,7 @@ namespace NetLibraryTests {
 
             using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                 socket.NoDelay = true;
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12358));
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12005));
                 socket.Listen(1);
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
@@ -200,7 +200,7 @@ namespace NetLibraryTests {
                         state++;
                         block.Set();
                     };
-                    client.Connect("127.0.0.1", 12358);
+                    client.Connect("127.0.0.1", 12005);
                     var socketa = socket.Accept();
 
                     Assert.True(socketa.Connected);
@@ -218,11 +218,11 @@ namespace NetLibraryTests {
         public async Task Dispose() {
             using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                 socket.NoDelay = true;
-                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12359));
+                socket.Bind(new IPEndPoint(IPAddress.Loopback, 12006));
                 socket.Listen(1);
 
                 var client = new FeatherTcpClient<BinaryMessage>();
-                client.Connect("127.0.0.1", 12359);
+                client.Connect("127.0.0.1", 12006);
                 Assert.False(client.IsDisposed);
                 client.Dispose();
                 Assert.True(client.IsDisposed);

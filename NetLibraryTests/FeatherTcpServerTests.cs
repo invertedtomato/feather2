@@ -23,7 +23,7 @@ namespace NetLibraryTests {
         private readonly Byte[] BlankWire = new byte[] { 0, 0 };
 
         [Fact]
-        public void Send() {
+        public async void Send () {
             var block = new AutoResetEvent(false);
             EndPoint remote = null;
 
@@ -32,16 +32,16 @@ namespace NetLibraryTests {
                     remote = endPoint;
                     block.Set();
                 };
-                server.Listen(12350);
+                server.Listen(13000);
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                     socket.NoDelay = true;
-                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12350));
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 13000));
 
                     block.WaitOne(1000);
                     Assert.NotNull(remote);
-                    server.SendTo(remote, TestMessage1);
-                    server.SendTo(remote, TestMessage2);
+                    await server.SendToAsync(remote, TestMessage1);
+                    await server.SendToAsync(remote, TestMessage2);
 
                     var buffer = new byte[TestWire1.Length];
                     var pos = 0;
@@ -63,12 +63,12 @@ namespace NetLibraryTests {
         }
 
         [Fact]
-        public async void SendAsync() {
+        public async void SendAsync () {
             var block = new AutoResetEvent(false);
             EndPoint remote = null;
 
             using (var server = new FeatherTcpServer<BinaryMessage>()) {
-                server.Listen(12350);
+                server.Listen(13001);
                 server.OnClientConnected += (endPoint) => {
                     remote = endPoint;
                     block.Set();
@@ -76,7 +76,7 @@ namespace NetLibraryTests {
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                     socket.NoDelay = true;
-                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12350));
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 13001));
 
                     block.WaitOne(1000);
                     Assert.NotNull(remote);
@@ -108,14 +108,14 @@ namespace NetLibraryTests {
             EndPoint remote = null;
 
             using (var server = new FeatherTcpServer<BinaryMessage>()) {
-                server.Listen(12352);
+                server.Listen(13002);
                 server.OnClientConnected += (endPoint) => {
                     remote = endPoint;
                 };
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                     socket.NoDelay = true;
-                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12352));
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 13002));
 
                     Thread.Sleep(10);
                     Assert.NotNull(remote);
@@ -135,7 +135,7 @@ namespace NetLibraryTests {
         */
 
         [Fact]
-        public void Disconnect() {
+        public void Disconnect () {
             var block = new AutoResetEvent(false);
             EndPoint remote = null;
 
@@ -144,11 +144,11 @@ namespace NetLibraryTests {
                     remote = endPoint;
                     block.Set();
                 };
-                server.Listen(12349);
+                server.Listen(13003);
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                     socket.NoDelay = true;
-                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12349));
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 13003));
                     block.WaitOne(1000);
 
                     Assert.NotNull(remote);
@@ -166,7 +166,7 @@ namespace NetLibraryTests {
         }
 
         [Fact]
-        public void ClientConnectedDisconnected() {
+        public void ClientConnectedDisconnected () {
             var stage = 0;
             var block = new AutoResetEvent(false);
 
@@ -180,10 +180,10 @@ namespace NetLibraryTests {
                     Assert.NotNull(endPoint);
                     block.Set();
                 };
-                server.Listen(12349);
+                server.Listen(13004);
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
-                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12349));
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 13004));
                     Thread.Sleep(10);
                 }
 
@@ -193,7 +193,7 @@ namespace NetLibraryTests {
         }
 
         [Fact]
-        public void Receive() {
+        public void Receive () {
             var stage = 0;
             var block = new AutoResetEvent(false);
 
@@ -210,11 +210,11 @@ namespace NetLibraryTests {
                         Assert.False(true);
                     }
                 };
-                server.Listen(12348);
+                server.Listen(13005);
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                     socket.NoDelay = true;
-                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12348));
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 13005));
                     Assert.True(socket.Connected);
                     socket.Send(TestWire1);
                     Thread.Sleep(10);
@@ -242,11 +242,11 @@ namespace NetLibraryTests {
                     state++;
                     block.Set();
                 };
-                server.Listen(12351);
+                server.Listen(13006);
 
                 using (var socket = new Socket(SocketType.Stream, ProtocolType.Tcp)) {
                     socket.NoDelay = true;
-                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 12351));
+                    socket.Connect(new IPEndPoint(IPAddress.Loopback, 13006));
                     Assert.True(socket.Connected);
                     socket.Send(BlankWire); // Blank message
 
@@ -259,17 +259,18 @@ namespace NetLibraryTests {
         */
 
         [Fact]
-        public void Dispose() {
+        public void Dispose () {
             var server = new FeatherTcpServer<BinaryMessage>();
             Assert.False(server.IsDisposed);
-            server.Listen(12345);
+            server.Listen(13007);
             Assert.False(server.IsDisposed);
             server.Dispose();
             Assert.True(server.IsDisposed);
         }
 
         [Fact]
-        public async Task Secure() {
+        public async Task Secure () {
+            throw new NotImplementedException();
             var state = 0;
             var block = new AutoResetEvent(false);
 
@@ -311,10 +312,10 @@ namespace NetLibraryTests {
                         throw new Exception();
                     }
                 };
-                server.ListenSecure(12360, certificate);
+                server.ListenSecure(13008, certificate);
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
-                    await client.ConnectSecureAsync("localhost", 12360);
+                    await client.ConnectSecureAsync("localhost", 13008);
                     await client.SendAsync(TestMessage1);
                     await client.SendAsync(TestMessage2);
 

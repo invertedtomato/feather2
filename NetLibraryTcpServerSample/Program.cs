@@ -4,7 +4,7 @@ using System;
 
 namespace NetLibraryTcpServerSample {
     class Program {
-        static void Main(string[] args) {
+        static void Main (string[] args) {
             using (var server = new FeatherTcpServer<GenericMessage>()) {
                 // Watch for when clients connect
                 server.OnClientConnected += (endPoint) => {
@@ -17,7 +17,7 @@ namespace NetLibraryTcpServerSample {
                 };
 
                 // Watch for messages to arrive
-                server.OnMessageReceived += (endPoint, message) => {
+                server.OnMessageReceived += async (endPoint, message) => {
                     // Read parameters in the same order they were written
                     var name = message.ReadString();
                     var body = message.ReadString();
@@ -25,7 +25,7 @@ namespace NetLibraryTcpServerSample {
 
                     // Forward message on to all clients (including the sender, for confirmation)
                     foreach (var remoteEndPoint in server.RemoteEndPoints) {
-                        server.SendTo(remoteEndPoint, message);
+                        await server.SendToAsync(remoteEndPoint, message);
                     }
                 };
 

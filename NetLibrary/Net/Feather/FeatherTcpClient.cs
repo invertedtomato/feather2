@@ -29,29 +29,29 @@ namespace InvertedTomato.Net.Feather {
         private event Action OnPokeReceived;
         public event Action<DisconnectionType> OnDisconnected;
 
-        public void Connect(string host, int port) {
+        public void Connect (string host, int port) {
             // Connect
             Underlying.Connect(host, port);
             UnderlyingStream = new NetworkStream(Underlying, true);
 
             // Seed receive process
-            ReceiveLength();
+            Task.Run((Action)ReceiveLength);
         }
 
-        public async Task ConnectAsync(string host, int port) {
+        public async Task ConnectAsync (string host, int port) {
             // Connect
             await Underlying.ConnectAsync(host, port);
             UnderlyingStream = new NetworkStream(Underlying, true);
 
             // Seed receive process
-            ReceiveLength();
+            var receiveTask = Task.Run((Action)ReceiveLength);
         }
 
-        public async Task ConnectSecureAsync(string host, int port) {
+        public async Task ConnectSecureAsync (string host, int port) {
             await ConnectSecureAsync(host, port, host, null);
         }
 
-        public async Task ConnectSecureAsync(string host, int port, string validateHost, RemoteCertificateValidationCallback remoteCertificateValidationCallback) {
+        public async Task ConnectSecureAsync (string host, int port, string validateHost, RemoteCertificateValidationCallback remoteCertificateValidationCallback) {
             // Connect
             await Underlying.ConnectAsync(host, port);
 
@@ -65,7 +65,7 @@ namespace InvertedTomato.Net.Feather {
         }
 
 
-        public void Send(TMessage message) {
+        public void Send (TMessage message) {
             if (null == message) {
                 throw new ArgumentNullException(nameof(message));
             }
@@ -90,7 +90,7 @@ namespace InvertedTomato.Net.Feather {
             stream.Write(payload);
         }
 
-        public async Task SendAsync(TMessage message) {
+        public async Task SendAsync (TMessage message) {
             if (null == message) {
                 throw new ArgumentNullException(nameof(message));
             }
@@ -115,11 +115,11 @@ namespace InvertedTomato.Net.Feather {
             await stream.WriteAsync(payload);
         }
 
-        private void Poke() {
+        private void Poke () {
             UnderlyingStream.Write(BlankPayload);
         }
 
-        protected virtual void Dispose(bool disposing) {
+        protected virtual void Dispose (bool disposing) {
             if (IsDisposed) {
                 return;
             }
@@ -136,25 +136,29 @@ namespace InvertedTomato.Net.Feather {
             }
         }
 
-        public void Dispose() {
+        public void Dispose () {
             Dispose(true);
         }
 
 
 
-        private void Closed() {
+        private void HandleRemoteDisconenct () {
+            // Cleanup
+            UnderlyingStream.Dispose();
             Underlying.Dispose();
+
+            // Fire event handler
             OnDisconnected?.Invoke(DisconnectionType.RemoteDisconnection);
         }
 
-        private async Task ReceiveLength() {
+        private async void ReceiveLength () {
             try {
                 // Start the read
                 var bytesTransfered = await UnderlyingStream.ReadAsync(LengthBuffer, LengthCount, LengthBuffer.Length - LengthCount);
 
                 // Detect closed connection and handle
                 if (bytesTransfered <= 0) {
-                    Closed();
+                    HandleRemoteDisconenct();
                     return;
                 }
 
@@ -183,17 +187,20 @@ namespace InvertedTomato.Net.Feather {
                     // Receive payload now
                     ReceivePayload();
                 }
-            } catch (ObjectDisposedException) { };
+            } catch (ObjectDisposedException) {
+            } catch (IOException) {
+                HandleRemoteDisconenct();
+            }
         }
 
-        private async Task ReceivePayload() {
+        private async void ReceivePayload () {
             try {
                 // Start the read
                 var bytesTransfered = await UnderlyingStream.ReadAsync(PayloadBuffer, PayloadCount, PayloadBuffer.Length - PayloadCount);
 
                 // Detect closed connection and handle
                 if (bytesTransfered <= 0) {
-                    Closed();
+                    HandleRemoteDisconenct();
                     return;
                 }
 
@@ -217,9 +224,10 @@ namespace InvertedTomato.Net.Feather {
                     // Restart receive process with next lenght header
                     ReceiveLength();
                 }
-            } catch (ObjectDisposedException) { };
+            } catch (ObjectDisposedException) {
+            } catch (IOException) {
+                HandleRemoteDisconenct();
+            }
         }
-
-
     }
 }
