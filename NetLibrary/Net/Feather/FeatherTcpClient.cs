@@ -229,5 +229,9 @@ namespace InvertedTomato.Net.Feather {
                 HandleRemoteDisconenct();
             }
         }
+
+        public Task ConnectSecureAsync(string v1, int v2, object test) {
+            throw new NotImplementedException();
+        }
     }
 }

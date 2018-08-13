@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.Security;
 using System.Net.Sockets;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -25,7 +26,7 @@ namespace NetLibraryTests {
         private readonly Byte[] BlankWire = new byte[] { 0, 0 };
 
         [Fact]
-        public async void Send () {
+        public async void Send() {
             var block = new AutoResetEvent(false);
             EndPoint remote = null;
 
@@ -65,7 +66,7 @@ namespace NetLibraryTests {
         }
 
         [Fact]
-        public async void SendAsync () {
+        public async void SendAsync() {
             var block = new AutoResetEvent(false);
             EndPoint remote = null;
 
@@ -137,7 +138,7 @@ namespace NetLibraryTests {
         */
 
         [Fact]
-        public void Disconnect () {
+        public void Disconnect() {
             var block = new AutoResetEvent(false);
             EndPoint remote = null;
 
@@ -168,7 +169,7 @@ namespace NetLibraryTests {
         }
 
         [Fact]
-        public void ClientConnectedDisconnected () {
+        public void ClientConnectedDisconnected() {
             var stage = 0;
             var block = new AutoResetEvent(false);
 
@@ -195,7 +196,7 @@ namespace NetLibraryTests {
         }
 
         [Fact]
-        public void Receive () {
+        public void Receive() {
             var stage = 0;
             var block = new AutoResetEvent(false);
 
@@ -261,7 +262,7 @@ namespace NetLibraryTests {
         */
 
         [Fact]
-        public void Dispose () {
+        public void Dispose() {
             var server = new FeatherTcpServer<BinaryMessage>();
             Assert.False(server.IsDisposed);
             server.Listen(13007);
@@ -271,7 +272,7 @@ namespace NetLibraryTests {
         }
 
         [Fact]
-        public async Task Secure () {
+        public async Task Secure() {
             var state = 0;
             var block = new AutoResetEvent(false);
 
@@ -294,7 +295,9 @@ namespace NetLibraryTests {
                 server.ListenSecure(13008, certificate);
 
                 using (var client = new FeatherTcpClient<BinaryMessage>()) {
-                    await client.ConnectSecureAsync("localhost", 13008);
+                    await client.ConnectSecureAsync("localhost", 13008, "localhost", (object sender, X509Certificate cert, X509Chain chain, SslPolicyErrors sslPolicyErrors) => {
+                        return true; // Ignore that it's a self-signed cert
+                    });
                     await client.SendAsync(TestMessage1);
                     await client.SendAsync(TestMessage2);
 
