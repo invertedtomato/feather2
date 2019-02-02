@@ -1,10 +1,10 @@
 # InvertedTomato.Feather2
 Feather2 is extremely fast and lightweight network messaging system. It's kinda like WCF, without the nonsense and 
-with scolding fast speeds. It's great for applications communicating over a network when speed, efficentcy or the 
+with scolding fast speeds. It's great for applications communicating over a network when speed, efficiency or the 
 one-way nature of traditional web APIs isn't a great fit.
 
-Feather2 is the replacement of Feather1. Feather1 was great, though it's interface was cumberson in areas and it lacked
-flexibiliy and UDP support.
+Feather2 is the replacement of Feather1. Feather1 was great, though it's interface was cumbersome in areas, it lacked
+flexibility and UDP support and it was limited to .NET Framework. Feather2 addresses all of those issues.
 
 ## TLDR, how do I make it go?
 ### TCP Server
